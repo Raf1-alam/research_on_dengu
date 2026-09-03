@@ -1,0 +1,21 @@
+# Project memory temporary files
+.projectmem/events.jsonl
+.projectmem/watch.pid
+.projectmem/watch.log
+.projectmem/structure.json
+
+# Python & Notebook Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+*.egg-info/
+.pytest_cache/
+
+# Environments & Logs
+.env
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
