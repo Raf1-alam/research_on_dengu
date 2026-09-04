@@ -18,6 +18,7 @@ A dual-scale dengue early warning research framework for Bangladesh linking indi
 - Advance to Notebook 3: Population Outbreak Forecasting & Validation Harness
 - Documented ML Notebook 1 limitations and established course correction plan for ICEEICT 2027 in ml_notebook1_limitations.md
 - Created dataset_plan.md detailing verified 64-district panel (figshare) and Cox's Bazar illness-day cohort (Zenodo) for ICEEICT 2027
+- Created PROJECT_ANALYSIS_AND_FUTURE_ROADMAP.md detailing full architectural analysis, empirical results synthesis (Tables 1-5, Figures 1-5), risk register, and four-phase roadmap for IEEE ICEEICT 2027 paper submission.
 
 ## Notes
 - Verified exact live Kaggle slugs: DGHS district cases (shampabanik12/district-wise-dengue-dataset-for-bangladesh) and clinical patient data (kawsarahmad/dengue-dataset-bangladesh). Upgraded Notebook 1 scanner to dynamically identify files by column signatures and extract all clinical symptoms (fever duration, platelet, WBC, retro-orbital pain, myalgia, rash).
@@ -36,6 +37,7 @@ A dual-scale dengue early warning research framework for Bangladesh linking indi
 - `10.17632/6fsrsk3mb8.2`
 - `ml_notebook1_limitations.md`
 - `dataset_plan.md`
+- `PROJECT_ANALYSIS_AND_FUTURE_ROADMAP.md`
 
 ## Open questions
 - None logged yet.
