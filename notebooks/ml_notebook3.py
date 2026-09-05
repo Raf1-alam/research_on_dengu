@@ -1359,6 +1359,49 @@ for h in [1, 2, 4]:
                      "delta_MAE_vs_case_history": round(mae - base, 3)})
 abl = save_table("table8_covariate_ablation", pd.DataFrame(rows),
                  "Marginal value of each covariate group, anchored-growth model")
+
+# Leave-one-climate-variable-out. Al Mobin (2024, Sci Rep) reports that relative
+# humidity is redundant for Bangladeshi dengue prediction; that was concluded from a
+# wrapper search on national monthly data with the scaler fitted before the split, so
+# it is worth testing directly at district-week resolution under prospective evaluation.
+FULL_CLIM = G_AR + G_SEASON + G_CLIMATE + G_CLIMATE_EXTRA
+rows = []
+for h in [1, 2]:
+    base_F = select_features(MD, [FULL_CLIM])
+    P0 = rolling_origin(MD, base_F, h, arima_tag="district")
+    pers = mean_absolute_error(P0.y, P0.persistence)
+    mae0 = mean_absolute_error(P0.y, P0.anchored)
+    # A leave-one-out delta only means something if it is larger than the noise the
+    # same model shows across seeds. Reference: sd of the seed members' own MAE.
+    sc = [f"__seed{sd}__anchored_{GROWTH_OBJ_NAME}" for sd in SEEDS]
+    sc = [c for c in sc if c in P0.columns]
+    seed_sd = (float(np.std([mean_absolute_error(P0.y, P0[c]) for c in sc], ddof=1))
+               if len(sc) > 1 else np.nan)
+    rows.append({"horizon_weeks": h, "variable_removed": "(none)", "n_features": len(base_F),
+                 "MAE_anchored": round(mae0, 3), "delta_MAE_vs_full": 0.0,
+                 "seed_noise_MAE_sd": round(seed_sd, 3), "exceeds_seed_noise": False,
+                 "skill_vs_persistence_pct": round(100 * (1 - mae0 / pers), 2)})
+    for v in CLIM_BASE:
+        F = select_features(MD, [[c for c in FULL_CLIM if not c.startswith(v)]])
+        P = rolling_origin(MD, F, h, arima_tag="district")
+        mae = mean_absolute_error(P.y, P.anchored)
+        d = mae - mae0
+        rows.append({"horizon_weeks": h, "variable_removed": v, "n_features": len(F),
+                     "MAE_anchored": round(mae, 3), "delta_MAE_vs_full": round(d, 3),
+                     "seed_noise_MAE_sd": round(seed_sd, 3),
+                     "exceeds_seed_noise": bool(abs(d) > seed_sd) if np.isfinite(seed_sd) else None,
+                     "skill_vs_persistence_pct": round(100 * (1 - mae / pers), 2)})
+loo = save_table("table8b_climate_leave_one_out", pd.DataFrame(rows),
+                 "Leave-one-climate-variable-out. A positive delta means removing the "
+                 "variable hurt. Compare every delta against seed_noise_MAE_sd before "
+                 "reading anything into it: at this resolution none of them clears it, so "
+                 "individual climate contributions are not separately identifiable")
+print(loo.to_string(index=False))
+if "exceeds_seed_noise" in loo:
+    log.info("climate leave-one-out: %d of %d variables move MAE by more than the "
+             "seed-to-seed noise of the same model - individual climate contributions "
+             "are not separately identifiable at this resolution",
+             int(loo.exceeds_seed_noise.fillna(False).sum()), int((loo.variable_removed != "(none)").sum()))
 print(abl[abl.horizon_weeks == 2].to_string(index=False))
 
 
