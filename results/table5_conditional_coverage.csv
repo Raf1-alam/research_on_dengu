@@ -1,0 +1,28 @@
+horizon_weeks,method,burden_tertile,n_unit_weeks,coverage,median_width_cases
+1,Quantile LightGBM (uncalibrated),low burden,2310,0.8394,2.08
+1,Quantile LightGBM (uncalibrated),mid burden,2205,0.7896,5.63
+1,Quantile LightGBM (uncalibrated),high burden,2205,0.7828,20.57
+1,Split-conformal CQR,low burden,2310,0.9247,2.69
+1,Split-conformal CQR,mid burden,2205,0.8862,7.07
+1,Split-conformal CQR,high burden,2205,0.8771,26.64
+1,Adaptive conformal (ACI),low burden,2310,0.9225,2.61
+1,Adaptive conformal (ACI),mid burden,2205,0.8839,6.88
+1,Adaptive conformal (ACI),high burden,2205,0.8739,25.87
+2,Quantile LightGBM (uncalibrated),low burden,2310,0.8255,2.34
+2,Quantile LightGBM (uncalibrated),mid burden,2205,0.7669,6.32
+2,Quantile LightGBM (uncalibrated),high burden,2205,0.7646,22.02
+2,Split-conformal CQR,low burden,2310,0.939,4.07
+2,Split-conformal CQR,mid burden,2205,0.912,10.15
+2,Split-conformal CQR,high burden,2205,0.9057,36.06
+2,Adaptive conformal (ACI),low burden,2310,0.9333,3.84
+2,Adaptive conformal (ACI),mid burden,2205,0.9102,9.48
+2,Adaptive conformal (ACI),high burden,2205,0.8993,33.48
+4,Quantile LightGBM (uncalibrated),low burden,2310,0.8303,3.75
+4,Quantile LightGBM (uncalibrated),mid burden,2205,0.7596,8.49
+4,Quantile LightGBM (uncalibrated),high burden,2205,0.7483,27.36
+4,Split-conformal CQR,low burden,2310,0.9463,5.54
+4,Split-conformal CQR,mid burden,2205,0.8889,12.4
+4,Split-conformal CQR,high burden,2205,0.8776,40.61
+4,Adaptive conformal (ACI),low burden,2310,0.9442,5.42
+4,Adaptive conformal (ACI),mid burden,2205,0.8871,12.02
+4,Adaptive conformal (ACI),high burden,2205,0.873,39.87

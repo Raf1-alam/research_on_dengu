@@ -1,0 +1,33 @@
+horizon_weeks,model,key,MAE,RMSE,wMAPE_pct,skill_vs_persistence_pct
+1,Lag-0 persistence,persistence,9.077,31.288,29.93,0.0
+1,Seasonal naive,snaive,46.222,253.097,152.43,-409.22
+1,Log-AR(4) ridge,ridge_ar4,10.276,46.511,33.89,-13.21
+1,LightGBM level (L2),level_L2,12.059,66.086,39.77,-32.85
+1,LightGBM level (Poisson),level_Poisson,9.907,54.827,32.67,-9.14
+1,LightGBM level (Tweedie),level_Tweedie,8.276,30.032,27.29,8.83
+1,LightGBM anchored growth (L2),anchored_L2,8.364,30.379,27.58,7.85
+1,LightGBM anchored growth (L1),anchored_L1,7.845,26.746,25.87,13.57
+2,Lag-0 persistence,persistence,12.234,49.822,40.36,0.0
+2,Seasonal naive,snaive,46.343,245.788,152.89,-278.8
+2,Log-AR(4) ridge,ridge_ar4,14.065,71.389,46.4,-14.96
+2,LightGBM level (L2),level_L2,14.449,71.253,47.67,-18.1
+2,LightGBM level (Poisson),level_Poisson,10.571,42.886,34.88,13.59
+2,LightGBM level (Tweedie),level_Tweedie,10.247,35.991,33.81,16.25
+2,LightGBM anchored growth (L2),anchored_L2,10.747,43.564,35.46,12.16
+2,LightGBM anchored growth (L1),anchored_L1,9.344,33.767,30.83,23.62
+3,Lag-0 persistence,persistence,15.903,69.032,52.47,0.0
+3,Seasonal naive,snaive,47.206,239.877,155.74,-196.84
+3,Log-AR(4) ridge,ridge_ar4,17.73,93.423,58.5,-11.49
+3,LightGBM level (L2),level_L2,17.187,77.743,56.7,-8.08
+3,LightGBM level (Poisson),level_Poisson,13.215,48.062,43.6,16.9
+3,LightGBM level (Tweedie),level_Tweedie,12.605,39.718,41.59,20.74
+3,LightGBM anchored growth (L2),anchored_L2,13.548,61.13,44.7,14.81
+3,LightGBM anchored growth (L1),anchored_L1,14.476,67.978,47.76,8.97
+4,Lag-0 persistence,persistence,19.398,86.805,64.0,0.0
+4,Seasonal naive,snaive,48.354,235.841,159.55,-149.27
+4,Log-AR(4) ridge,ridge_ar4,20.839,111.249,68.76,-7.43
+4,LightGBM level (L2),level_L2,20.803,88.676,68.64,-7.24
+4,LightGBM level (Poisson),level_Poisson,15.689,49.097,51.77,19.12
+4,LightGBM level (Tweedie),level_Tweedie,15.794,51.697,52.11,18.58
+4,LightGBM anchored growth (L2),anchored_L2,18.551,98.462,61.21,4.36
+4,LightGBM anchored growth (L1),anchored_L1,16.013,60.35,52.84,17.45

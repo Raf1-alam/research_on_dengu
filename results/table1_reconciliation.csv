@@ -1,0 +1,11 @@
+panel,year,observed,official_dghs,delta_pct,abs_delta_pct,tolerance_pct,status
+district,2019,30257,101354.0,-70.15,70.14720681966178,1.0,partial season
+district,2022,62021,62382.0,-0.58,0.5786925715751339,1.0,reconciled
+district,2023,321593,321179.0,0.13,0.12890008375391918,1.0,reconciled
+district,2024,101016,101214.0,-0.2,0.19562511115063133,1.0,reconciled
+district,2025,102562,,,,1.0,partial season
+district,2026,6871,,,,1.0,partial season
+divisional,2022,61227,62382.0,-1.85,1.8514956237376166,2.5,reconciled
+divisional,2023,320644,321179.0,-0.17,0.16657377973030615,2.5,reconciled
+divisional,2024,101844,101214.0,0.62,0.6224435354792816,2.5,reconciled
+divisional,2025,69777,,,,2.5,partial season

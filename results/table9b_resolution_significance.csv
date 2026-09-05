@@ -1,0 +1,5 @@
+horizon_weeks,gap_divisional_pp,gap_district_pp,difference_in_differences_pp,boot_lo,boot_hi,boot_p,verdict,boot_p_BH
+1,15.92,2.0,13.93,3.54,19.19,0.0,gap is larger at coarse resolution,0.0
+2,13.01,2.24,10.77,-2.65,24.73,0.163,no significant resolution effect,0.326
+3,13.8,8.35,5.45,-8.4,14.58,0.628,no significant resolution effect,0.628
+4,14.54,8.43,6.11,-12.64,22.5,0.569,no significant resolution effect,0.628

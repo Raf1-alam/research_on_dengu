@@ -1,0 +1,13 @@
+horizon_weeks,method,key,nominal,empirical_coverage,median_width_cases,mean_width_cases,WIS,cov_t,cov_p_raw,n_units,cov_p_BH,verdict
+1,Empirical growth quantiles (no model),empirical,0.9,0.8387,7.1,76.27,6.202,-8.755,0.0,64,0.0,differs from 0.90 (BH q<0.05)
+1,Quantile LightGBM (uncalibrated),raw,0.9,0.8045,6.31,30.55,4.56,-13.68,0.0,64,0.0,differs from 0.90 (BH q<0.05)
+1,Split-conformal CQR,split,0.9,0.8964,7.92,43.25,4.594,-0.687,0.4945,64,0.5395,indistinguishable from 0.90
+1,Adaptive conformal (ACI),adaptive,0.9,0.8939,7.76,42.55,4.585,-1.149,0.255,64,0.34,indistinguishable from 0.90
+2,Empirical growth quantiles (no model),empirical,0.9,0.8738,10.65,135.76,9.209,-5.049,0.0,64,0.0,differs from 0.90 (BH q<0.05)
+2,Quantile LightGBM (uncalibrated),raw,0.9,0.7863,7.1,38.46,5.856,-15.228,0.0,64,0.0,differs from 0.90 (BH q<0.05)
+2,Split-conformal CQR,split,0.9,0.9192,11.21,70.1,6.22,4.238,0.0001,64,0.0002,differs from 0.90 (BH q<0.05)
+2,Adaptive conformal (ACI),adaptive,0.9,0.9146,10.43,63.8,6.05,3.119,0.0027,64,0.0046,differs from 0.90 (BH q<0.05)
+4,Empirical growth quantiles (no model),empirical,0.9,0.9052,27.37,339.33,18.594,1.184,0.241,64,0.34,indistinguishable from 0.90
+4,Quantile LightGBM (uncalibrated),raw,0.9,0.7802,10.04,60.23,9.425,-12.801,0.0,64,0.0,differs from 0.90 (BH q<0.05)
+4,Split-conformal CQR,split,0.9,0.9049,14.42,91.67,9.512,0.761,0.4497,64,0.5395,indistinguishable from 0.90
+4,Adaptive conformal (ACI),adaptive,0.9,0.9021,14.15,91.29,9.514,0.316,0.753,64,0.753,indistinguishable from 0.90

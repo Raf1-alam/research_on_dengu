@@ -1,0 +1,10 @@
+check,metric,value,n,verdict
+cases vs independent bulletin,Pearson r,0.9994,1600,PASS
+cases vs independent bulletin,exact-match rate,0.8662,1600,INFO
+cases vs independent bulletin,total difference %,0.511,1600,PASS
+climate vs NASA POWER: temp_mean,Pearson r,0.9975,1672,PASS
+climate vs NASA POWER: temp_mean,mean bias (panel - NASA),0.058,1672,INFO
+climate vs NASA POWER: humidity,Pearson r,0.9881,1672,PASS
+climate vs NASA POWER: humidity,mean bias (panel - NASA),-0.651,1672,INFO
+climate vs NASA POWER: rain,Pearson r,0.8576,1672,"FLAG — different product (panel rain is CHIRPS, not POWER)"
+climate vs NASA POWER: rain,mean bias (panel - NASA),-10.905,1672,INFO

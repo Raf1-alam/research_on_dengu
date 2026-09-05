@@ -1,0 +1,161 @@
+{
+  "generated_utc": "2026-09-04T21:54:30+00:00",
+  "seed": 42,
+  "test_years": [
+    2024,
+    2025
+  ],
+  "horizons": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "nominal_coverage": 0.9,
+  "calibration_weeks": {
+    "1": 39,
+    "2": 39,
+    "4": 26
+  },
+  "alpha": 0.05,
+  "selected_hyperparameters": {
+    "colsample_bytree": 0.8,
+    "learning_rate": 0.05,
+    "max_depth": 5,
+    "min_child_samples": 40,
+    "n_estimators": 300,
+    "num_leaves": 15,
+    "subsample": 0.8,
+    "random_state": 42,
+    "verbose": -1,
+    "n_jobs": -1
+  },
+  "selected_tweedie_power": 1.3,
+  "selected_growth_objective": "L1",
+  "selection_split": {
+    "train_max_year": 2022,
+    "validate_year": 2023
+  },
+  "district_rows": 14464,
+  "district_units": 64,
+  "district_features_full": 77,
+  "district_features_shared": 42,
+  "divisional_rows": 1536,
+  "forbidden_columns_blocked": [
+    "alarm_threshold",
+    "block",
+    "cases",
+    "cumulative_cases",
+    "cumulative_deaths",
+    "district_id",
+    "eligible",
+    "eligible_loose",
+    "gap_block",
+    "ignition",
+    "ignition_loose",
+    "naive",
+    "unit",
+    "week_start",
+    "year"
+  ],
+  "tables": {
+    "table1_reconciliation": {
+      "rows": 10,
+      "caption": "DGHS surveillance reconciliation",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table1_reconciliation.csv"
+    },
+    "table1b_data_quality": {
+      "rows": 15,
+      "caption": "Data-quality audit of the district panel",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table1b_data_quality.csv"
+    },
+    "table1c_external_cross_checks": {
+      "rows": 9,
+      "caption": "Panel validated against sources it was not derived from",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table1c_external_cross_checks.csv"
+    },
+    "table1d_model_selection": {
+      "rows": 28,
+      "caption": "Every tuned constant, chosen on train<=2022 / validate 2023; metric is inner-validation MAE except the calibration window (|coverage-nominal|)",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table1d_model_selection.csv"
+    },
+    "table2_forecast_shootout": {
+      "rows": 32,
+      "caption": "Multi-horizon prospective forecast comparison, district resolution",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table2_forecast_shootout.csv"
+    },
+    "table3_uncertainty_on_deltas": {
+      "rows": 16,
+      "caption": "Block-bootstrap intervals and panel Diebold-Mariano tests, Benjamini-Hochberg corrected at q=0.05",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table3_uncertainty_on_deltas.csv"
+    },
+    "table4_interval_calibration": {
+      "rows": 12,
+      "caption": "Coverage, width, WIS, and a test of coverage against nominal",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table4_interval_calibration.csv"
+    },
+    "table5_conditional_coverage": {
+      "rows": 27,
+      "caption": "Coverage conditional on district burden tertile",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table5_conditional_coverage.csv"
+    },
+    "table6_optimism_gap": {
+      "rows": 5,
+      "caption": "2x2 space-time validation matrix",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table6_optimism_gap.csv"
+    },
+    "table7a_alarm_performance": {
+      "rows": 8,
+      "caption": "Alarm performance at fixed public-health sensitivity",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table7a_alarm_performance.csv"
+    },
+    "table7b_alarm_lead_time": {
+      "rows": 99,
+      "caption": "Weeks of warning before outbreak onset and before peak, h=2, sensitivity 0.80",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table7b_alarm_lead_time.csv"
+    },
+    "table7c_divisional_alarm": {
+      "rows": 8,
+      "caption": "Alarm discrimination by division, h=2",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table7c_divisional_alarm.csv"
+    },
+    "table8_covariate_ablation": {
+      "rows": 15,
+      "caption": "Marginal value of each covariate group, anchored-growth model",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table8_covariate_ablation.csv"
+    },
+    "table9_resolution_ablation": {
+      "rows": 32,
+      "caption": "Skill by spatial resolution, shared feature set only",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table9_resolution_ablation.csv"
+    },
+    "table9b_resolution_significance": {
+      "rows": 4,
+      "caption": "Difference-in-differences test of the resolution-dependence claim",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table9b_resolution_significance.csv"
+    },
+    "table11_data_quality_sensitivity": {
+      "rows": 16,
+      "caption": "Do the two audit defects change the conclusions? A: missing-report zeros. B: CHIRPS-vs-POWER rainfall mismatch",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table11_data_quality_sensitivity.csv"
+    },
+    "table10_forward_test_2026": {
+      "rows": 3,
+      "caption": "True forward test: model frozen at end-2025, applied to 2026",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table10_forward_test_2026.csv"
+    },
+    "table0_assumptions_register": {
+      "rows": 19,
+      "caption": "Every constant, and whether it was selected empirically or assumed",
+      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table0_assumptions_register.csv"
+    }
+  },
+  "figures": [
+    "fig1_national_series_folds.png",
+    "fig2_skill_by_horizon.png",
+    "fig3_forecast_with_intervals.png",
+    "fig4_coverage_calibration.png",
+    "fig5_optimism_gap.png",
+    "fig6_alarm_lead_time.png"
+  ]
+}

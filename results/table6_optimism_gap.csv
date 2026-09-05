@@ -1,0 +1,6 @@
+condition,holds_out,ROC_AUC,PR_AUC
+C1 random 80/20,nothing meaningful,0.9819,0.9312
+C2 rolling origin,future seasons,0.9231,0.6906
+C3 leave-one-division-out,unseen geography,0.9579,0.8426
+C4 space + time,both,0.9034,0.6114
+OPTIMISM GAP (C1 - C4),,0.0785,0.3199

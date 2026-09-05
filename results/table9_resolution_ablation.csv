@@ -1,0 +1,33 @@
+resolution,n_units,horizon_weeks,model,key,MAE,skill_vs_persistence_pct
+district (64 units),64,1,LightGBM level (Tweedie),level_Tweedie,8.253,9.08
+district (64 units),64,1,LightGBM level (L2),level_L2,11.546,-27.2
+district (64 units),64,1,LightGBM anchored growth (L1),anchored_L1,8.071,11.08
+district (64 units),64,1,LightGBM anchored growth (L2),anchored_L2,8.758,3.51
+district (64 units),64,2,LightGBM level (Tweedie),level_Tweedie,10.73,12.29
+district (64 units),64,2,LightGBM level (L2),level_L2,15.01,-22.69
+district (64 units),64,2,LightGBM anchored growth (L1),anchored_L1,10.457,14.53
+district (64 units),64,2,LightGBM anchored growth (L2),anchored_L2,10.899,10.91
+district (64 units),64,3,LightGBM level (Tweedie),level_Tweedie,14.299,10.09
+district (64 units),64,3,LightGBM level (L2),level_L2,18.2,-14.45
+district (64 units),64,3,LightGBM anchored growth (L1),anchored_L1,12.97,18.44
+district (64 units),64,3,LightGBM anchored growth (L2),anchored_L2,13.777,13.37
+district (64 units),64,4,LightGBM level (Tweedie),level_Tweedie,17.262,11.01
+district (64 units),64,4,LightGBM level (L2),level_L2,22.672,-16.88
+district (64 units),64,4,LightGBM anchored growth (L1),anchored_L1,15.627,19.44
+district (64 units),64,4,LightGBM anchored growth (L2),anchored_L2,16.328,15.83
+divisional (8 units),8,1,LightGBM level (Tweedie),level_Tweedie,41.675,-0.7
+divisional (8 units),8,1,LightGBM level (L2),level_L2,90.659,-119.06
+divisional (8 units),8,1,LightGBM anchored growth (L1),anchored_L1,35.085,15.22
+divisional (8 units),8,1,LightGBM anchored growth (L2),anchored_L2,40.204,2.85
+divisional (8 units),8,2,LightGBM level (Tweedie),level_Tweedie,66.705,-0.17
+divisional (8 units),8,2,LightGBM level (L2),level_L2,122.078,-83.33
+divisional (8 units),8,2,LightGBM anchored growth (L1),anchored_L1,58.039,12.84
+divisional (8 units),8,2,LightGBM anchored growth (L2),anchored_L2,60.825,8.66
+divisional (8 units),8,3,LightGBM level (Tweedie),level_Tweedie,89.349,3.81
+divisional (8 units),8,3,LightGBM level (L2),level_L2,160.17,-72.44
+divisional (8 units),8,3,LightGBM anchored growth (L1),anchored_L1,76.528,17.61
+divisional (8 units),8,3,LightGBM anchored growth (L2),anchored_L2,77.782,16.26
+divisional (8 units),8,4,LightGBM level (Tweedie),level_Tweedie,111.358,6.91
+divisional (8 units),8,4,LightGBM level (L2),level_L2,198.187,-65.68
+divisional (8 units),8,4,LightGBM anchored growth (L1),anchored_L1,93.969,21.44
+divisional (8 units),8,4,LightGBM anchored growth (L2),anchored_L2,99.658,16.69

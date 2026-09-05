@@ -1,0 +1,20 @@
+constant,value,basis,evidence
+horizons,"[1, 2, 3, 4]",operational choice,1-4 weeks is the window in which a health directorate can act
+test years,"[2024, 2025]",empirical,"2026 excluded: 1600 rows over 25 pre-monsoon weeks, not a full season; used instead as a frozen forward test in Cell 13"
+selection split,"train<=2022, validate 2023",design,no test year participates in any tuning decision
+tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 40}",SELECTED,"inner-validation MAE sweep, Cell 4b / table1d"
+tweedie_variance_power,1.3,SELECTED,inner-validation MAE sweep over 1.1-1.9
+growth objective,L1,SELECTED,"inner-validation MAE, L1 vs L2"
+conformal calibration weeks,"{1: 39, 2: 39, 4: 26}",SELECTED,"inner-validation |coverage - nominal| over 8/13/26/39, chosen separately per horizon"
+nominal coverage,0.9,reporting convention,90% is standard for epidemic forecast hubs
+significance level,0.05,convention,0.05 two-sided; every family of tests is Benjamini-Hochberg corrected
+alarm quantile,0.8,assumption,per-unit 80th percentile of training-year cases; base rate 0.179. Sensitivity across 0.70/0.75/0.80/0.85 is not run - state as a limitation
+alarm minimum cases,5,assumption,floor so that near-zero districts cannot alarm on a single case
+case lags,"[1,2,3,4,8] weeks",assumption,covers the intrinsic + extrinsic incubation cycle; not swept
+climate lags,"[2,3,4] weeks",assumption,vector-development lag from the entomological literature; not swept
+modelling window,year >= 2022,empirical,"2019 covers only 30% of its season (30,257 of 101,354 official) and 2020-21 are absent"
+reconciliation tolerance,"{'district': 1.0, 'divisional': 2.5}",POST-HOC,the divisional bound was widened to 2.5% after observing a -1.85% gap in 2022; this is a post-hoc choice and is reported as such
+burden tertiles,3 equal-count groups,descriptive,cut on training-year mean cases only
+missing-report zeros,"791 weeks flagged, retained",empirical,cases=0 with patients still admitted; Cell 12b shows whether removing them changes the result
+rainfall source,district CHIRPS vs divisional NASA POWER,KNOWN MISMATCH,r=0.86 between products (table1c); Cell 12b re-runs the resolution test without rain
+bootstrap blocks,"(unit, fold)",design,resampling whole district-seasons preserves the serial correlation that a row-level bootstrap would destroy

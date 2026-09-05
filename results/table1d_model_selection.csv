@@ -1,0 +1,29 @@
+decision,candidate,inner_valid_MAE,selected
+tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 10}",78.4161,False
+tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 10}",79.7832,False
+tree hyperparameters,"{'num_leaves': 63, 'min_child_samples': 10}",79.7832,False
+tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 20}",79.7814,False
+tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 20}",71.8914,False
+tree hyperparameters,"{'num_leaves': 63, 'min_child_samples': 20}",71.8914,False
+tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 40}",70.5474,True
+tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 40}",71.7176,False
+tree hyperparameters,"{'num_leaves': 63, 'min_child_samples': 40}",71.7176,False
+tweedie_variance_power,1.1,45.2251,False
+tweedie_variance_power,1.3,44.4817,True
+tweedie_variance_power,1.5,46.1799,False
+tweedie_variance_power,1.7,48.3126,False
+tweedie_variance_power,1.9,59.7361,False
+growth objective,L2,70.5474,False
+growth objective,L1,44.9059,True
+conformal calibration weeks (h=1),8,0.0324,False
+conformal calibration weeks (h=1),13,0.0468,False
+conformal calibration weeks (h=1),26,0.0351,False
+conformal calibration weeks (h=1),39,0.0056,True
+conformal calibration weeks (h=2),8,0.0556,False
+conformal calibration weeks (h=2),13,0.0315,False
+conformal calibration weeks (h=2),26,0.0354,False
+conformal calibration weeks (h=2),39,0.0175,True
+conformal calibration weeks (h=4),8,0.0596,False
+conformal calibration weeks (h=4),13,0.0214,False
+conformal calibration weeks (h=4),26,0.0162,True
+conformal calibration weeks (h=4),39,0.0448,False

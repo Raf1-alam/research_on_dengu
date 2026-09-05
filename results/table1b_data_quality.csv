@@ -1,0 +1,16 @@
+check,value,status,note
+panel completeness,"16,256 of 16,256 cells",PASS,"64 units x 254 ISO weeks, Monday-start"
+duplicate unit-weeks,0,PASS,
+negative or fractional cases,0,PASS,
+zero-case weeks,47.3%,INFO,
+zeros that look like missing reports,791 rows (10.3% of zeros),FLAG,cases=0 while patients are still admitted; treat zero-inflation claims with care
+weeks with deaths but no new cases,9,FLAG,reporting lag: deaths of patients admitted earlier
+seasons where cumulative_cases decreases,192 of 384,FLAG,one per season at the ISO-year boundary; column is excluded from features
+range check: temp_mean,"[12.74, 35.97]",PASS,"expected [5, 42]"
+range check: humidity,"[18.70, 94.63]",PASS,"expected [10, 100]"
+range check: rain,"[0.00, 705.15]",PASS,"expected [0, 1500]"
+range check: ndvi,"[-0.44, 0.96]",PASS,"expected [-1, 1]"
+range check: ndwi,"[-0.99, 0.55]",PASS,"expected [-1, 1]"
+temp_min <= mean <= max,holds,PASS,
+gtrends_dengue distinct values per week,4 across 64 units,FLAG,"effectively a national seasonal clock; describe it as such, not as district search behaviour"
+"Benford deviation, nonzero counts",0.028,PASS,large deviations would suggest synthetic counts
