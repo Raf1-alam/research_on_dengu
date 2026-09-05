@@ -2,32 +2,32 @@ horizon_weeks,model,key,MAE,RMSE,wMAPE_pct,skill_vs_persistence_pct
 1,Lag-0 persistence,persistence,9.077,31.288,29.93,0.0
 1,Seasonal naive,snaive,46.222,253.097,152.43,-409.22
 1,Log-AR(4) ridge,ridge_ar4,10.276,46.511,33.89,-13.21
-1,LightGBM level (L2),level_L2,9.826,41.652,32.4,-8.25
-1,LightGBM level (Poisson),level_Poisson,10.074,53.685,33.22,-10.98
-1,LightGBM level (Tweedie),level_Tweedie,8.264,28.184,27.25,8.95
-1,LightGBM anchored growth (L2),anchored_L2,8.186,28.115,26.99,9.82
-1,LightGBM anchored growth (L1),anchored_L1,7.758,26.599,25.58,14.53
+1,LightGBM level (L2),level_L2,12.421,67.148,40.96,-36.84
+1,LightGBM level (Poisson),level_Poisson,9.212,41.944,30.38,-1.49
+1,LightGBM level (Tweedie),level_Tweedie,8.219,27.657,27.1,9.45
+1,LightGBM anchored growth (L2),anchored_L2,8.405,31.232,27.72,7.41
+1,LightGBM anchored growth (L1),anchored_L1,7.856,26.753,25.91,13.45
 2,Lag-0 persistence,persistence,12.234,49.822,40.36,0.0
 2,Seasonal naive,snaive,46.343,245.788,152.89,-278.8
 2,Log-AR(4) ridge,ridge_ar4,14.065,71.389,46.4,-14.96
-2,LightGBM level (L2),level_L2,12.295,45.87,40.56,-0.5
-2,LightGBM level (Poisson),level_Poisson,11.319,52.595,37.34,7.48
-2,LightGBM level (Tweedie),level_Tweedie,10.087,32.961,33.28,17.55
-2,LightGBM anchored growth (L2),anchored_L2,10.47,41.799,34.54,14.42
-2,LightGBM anchored growth (L1),anchored_L1,9.898,37.69,32.66,19.09
+2,LightGBM level (L2),level_L2,14.719,71.681,48.56,-20.31
+2,LightGBM level (Poisson),level_Poisson,10.343,38.542,34.12,15.46
+2,LightGBM level (Tweedie),level_Tweedie,10.088,32.133,33.28,17.54
+2,LightGBM anchored growth (L2),anchored_L2,10.488,42.363,34.6,14.27
+2,LightGBM anchored growth (L1),anchored_L1,9.779,36.465,32.26,20.07
 3,Lag-0 persistence,persistence,15.903,69.032,52.47,0.0
 3,Seasonal naive,snaive,47.206,239.877,155.74,-196.84
 3,Log-AR(4) ridge,ridge_ar4,17.73,93.423,58.5,-11.49
-3,LightGBM level (L2),level_L2,16.376,58.509,54.03,-2.97
-3,LightGBM level (Poisson),level_Poisson,12.909,46.024,42.59,18.83
-3,LightGBM level (Tweedie),level_Tweedie,12.877,43.276,42.48,19.03
-3,LightGBM anchored growth (L2),anchored_L2,14.038,65.223,46.31,11.73
-3,LightGBM anchored growth (L1),anchored_L1,13.656,59.119,45.05,14.13
+3,LightGBM level (L2),level_L2,17.719,78.984,58.46,-11.42
+3,LightGBM level (Poisson),level_Poisson,13.456,50.165,44.39,15.39
+3,LightGBM level (Tweedie),level_Tweedie,12.597,38.838,41.56,20.78
+3,LightGBM anchored growth (L2),anchored_L2,13.646,60.015,45.02,14.19
+3,LightGBM anchored growth (L1),anchored_L1,13.364,55.854,44.09,15.96
 4,Lag-0 persistence,persistence,19.398,86.805,64.0,0.0
 4,Seasonal naive,snaive,48.354,235.841,159.55,-149.27
 4,Log-AR(4) ridge,ridge_ar4,20.839,111.249,68.76,-7.43
-4,LightGBM level (L2),level_L2,20.547,65.362,67.79,-5.92
-4,LightGBM level (Poisson),level_Poisson,15.288,46.337,50.44,21.19
-4,LightGBM level (Tweedie),level_Tweedie,16.35,52.592,53.95,15.71
-4,LightGBM anchored growth (L2),anchored_L2,16.684,73.18,55.05,13.99
-4,LightGBM anchored growth (L1),anchored_L1,16.467,71.827,54.33,15.11
+4,LightGBM level (L2),level_L2,21.531,89.005,71.04,-11.0
+4,LightGBM level (Poisson),level_Poisson,15.655,49.581,51.65,19.3
+4,LightGBM level (Tweedie),level_Tweedie,16.238,53.395,53.58,16.29
+4,LightGBM anchored growth (L2),anchored_L2,16.733,74.35,55.21,13.74
+4,LightGBM anchored growth (L1),anchored_L1,16.274,71.294,53.7,16.11

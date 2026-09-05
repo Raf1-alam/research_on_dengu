@@ -1,31 +1,31 @@
 decision,candidate,inner_valid_MAE,se,selected
-tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 10}",73.5651,1.4939,False
-tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 10}",77.9147,2.3312,False
-tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 10}",83.5217,4.0372,False
-tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 20}",70.0274,1.7601,True
-tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 20}",78.4177,2.0331,False
-tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 20}",79.1414,3.9043,False
-tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 40}",70.8125,1.395,False
-tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 40}",73.3116,2.4421,False
-tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 40}",68.9093,1.4252,False
-tweedie_variance_power,1.1,41.8024,0.3973,True
-tweedie_variance_power,1.3,45.023,0.8192,False
-tweedie_variance_power,1.5,45.9231,0.382,False
-tweedie_variance_power,1.7,54.4657,0.7042,False
-tweedie_variance_power,1.9,63.3735,0.9322,False
-growth objective,L1,44.7688,2.4509,True
-growth objective,L2,70.0274,1.7601,False
-conformal calibration weeks (h=1),26,0.0361,,False
-conformal calibration weeks (h=1),39,0.0123,,True
+tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 10}",71.7191,1.3795,False
+tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 10}",77.4231,5.1213,False
+tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 10}",78.8006,1.5648,False
+tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 20}",71.8099,4.1876,False
+tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 20}",79.5426,0.6521,False
+tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 20}",78.4437,2.4841,False
+tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 40}",69.68,2.1197,True
+tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 40}",70.6656,1.7676,False
+tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 40}",72.9558,2.2675,False
+tweedie_variance_power,1.1,45.7846,1.1859,False
+tweedie_variance_power,1.3,43.6216,0.4911,True
+tweedie_variance_power,1.5,45.5303,0.1131,False
+tweedie_variance_power,1.7,50.5116,0.2125,False
+tweedie_variance_power,1.9,59.4764,0.1297,False
+growth objective,L1,47.4609,1.507,True
+growth objective,L2,69.68,2.1197,False
+conformal calibration weeks (h=1),26,0.0277,,False
+conformal calibration weeks (h=1),39,0.008,,True
 conformal calibration weeks (h=1),52,inf,,False
-conformal calibration weeks (h=2),26,0.0485,,False
-conformal calibration weeks (h=2),39,0.0443,,True
+conformal calibration weeks (h=2),26,0.0511,,False
+conformal calibration weeks (h=2),39,0.0495,,True
 conformal calibration weeks (h=2),52,inf,,False
 conformal calibration weeks (h=4),26,0.9,,True
 conformal calibration weeks (h=4),39,0.9,,False
 conformal calibration weeks (h=4),52,inf,,False
-adaptive conformal step size (gamma),0.005,0.0307,,False
-adaptive conformal step size (gamma),0.01,0.0238,,False
-adaptive conformal step size (gamma),0.02,0.0112,,False
-adaptive conformal step size (gamma),0.05,0.0062,,True
-adaptive conformal step size (gamma),0.1,0.0102,,False
+adaptive conformal step size (gamma),0.005,0.0412,,False
+adaptive conformal step size (gamma),0.01,0.0325,,False
+adaptive conformal step size (gamma),0.02,0.0172,,False
+adaptive conformal step size (gamma),0.05,0.0059,,True
+adaptive conformal step size (gamma),0.1,0.0132,,False

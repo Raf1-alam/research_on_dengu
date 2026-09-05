@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-09-05T10:26:06+00:00",
+  "generated_utc": "2026-09-05T10:45:58+00:00",
   "seed": 42,
   "test_years": [
     2024,
@@ -12,10 +12,10 @@
     4
   ],
   "versions": {
-    "python": "3.13.5",
-    "pandas": "3.0.3",
-    "numpy": "2.5.0",
-    "lightgbm": "4.7.0"
+    "python": "3.12.13",
+    "pandas": "2.3.3",
+    "numpy": "2.0.2",
+    "lightgbm": "4.6.0"
   },
   "nominal_coverage": 0.9,
   "calibration_weeks": {
@@ -28,7 +28,7 @@
     "colsample_bytree": 0.8,
     "learning_rate": 0.05,
     "max_depth": 5,
-    "min_child_samples": 20,
+    "min_child_samples": 40,
     "n_estimators": 300,
     "num_leaves": 7,
     "subsample": 0.8,
@@ -36,7 +36,7 @@
     "verbose": -1,
     "n_jobs": -1
   },
-  "selected_tweedie_power": 1.1,
+  "selected_tweedie_power": 1.3,
   "selected_growth_objective": "L1",
   "selection_split": {
     "train_max_year": 2022,
@@ -68,97 +68,97 @@
     "table1_reconciliation": {
       "rows": 10,
       "caption": "DGHS surveillance reconciliation",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table1_reconciliation.csv"
+      "path": "/kaggle/working/results/table1_reconciliation.csv"
     },
     "table1b_data_quality": {
       "rows": 15,
       "caption": "Data-quality audit of the district panel",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table1b_data_quality.csv"
+      "path": "/kaggle/working/results/table1b_data_quality.csv"
     },
     "table1c_external_cross_checks": {
       "rows": 9,
       "caption": "Panel validated against sources it was not derived from",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table1c_external_cross_checks.csv"
+      "path": "/kaggle/working/results/table1c_external_cross_checks.csv"
     },
     "table1d_model_selection": {
       "rows": 30,
       "caption": "Every tuned constant, chosen on train<=2022 / validate 2023; metric is inner-validation MAE except the calibration window (|coverage-nominal|)",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table1d_model_selection.csv"
+      "path": "/kaggle/working/results/table1d_model_selection.csv"
     },
     "table2_forecast_shootout": {
       "rows": 32,
       "caption": "Multi-horizon prospective forecast comparison, district resolution",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table2_forecast_shootout.csv"
+      "path": "/kaggle/working/results/table2_forecast_shootout.csv"
     },
     "table3_uncertainty_on_deltas": {
       "rows": 16,
       "caption": "Block-bootstrap intervals and panel Diebold-Mariano tests, Benjamini-Hochberg corrected at q=0.05. Effects and intervals, not significance labels - see the note in this cell",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table3_uncertainty_on_deltas.csv"
+      "path": "/kaggle/working/results/table3_uncertainty_on_deltas.csv"
     },
     "table4_interval_calibration": {
       "rows": 18,
       "caption": "Coverage, width, WIS, and a test of coverage against nominal",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table4_interval_calibration.csv"
+      "path": "/kaggle/working/results/table4_interval_calibration.csv"
     },
     "table5_conditional_coverage": {
       "rows": 45,
       "caption": "Coverage conditional on district burden tertile",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table5_conditional_coverage.csv"
+      "path": "/kaggle/working/results/table5_conditional_coverage.csv"
     },
     "table6_optimism_gap": {
       "rows": 5,
       "caption": "2x2 space-time validation matrix",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table6_optimism_gap.csv"
+      "path": "/kaggle/working/results/table6_optimism_gap.csv"
     },
     "table7a_alarm_performance": {
       "rows": 8,
       "caption": "Alarm performance at fixed public-health sensitivity",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table7a_alarm_performance.csv"
+      "path": "/kaggle/working/results/table7a_alarm_performance.csv"
     },
     "table7b_alarm_lead_time": {
-      "rows": 98,
+      "rows": 97,
       "caption": "Weeks of warning before outbreak onset and before peak, h=2, sensitivity 0.80",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table7b_alarm_lead_time.csv"
+      "path": "/kaggle/working/results/table7b_alarm_lead_time.csv"
     },
     "table7c_divisional_alarm": {
       "rows": 8,
       "caption": "Alarm discrimination by division, h=2",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table7c_divisional_alarm.csv"
+      "path": "/kaggle/working/results/table7c_divisional_alarm.csv"
     },
     "table8_covariate_ablation": {
       "rows": 15,
       "caption": "Marginal value of each covariate group, anchored-growth model",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table8_covariate_ablation.csv"
+      "path": "/kaggle/working/results/table8_covariate_ablation.csv"
     },
     "table9_resolution_ablation": {
       "rows": 32,
       "caption": "Skill by spatial resolution, shared feature set only",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table9_resolution_ablation.csv"
+      "path": "/kaggle/working/results/table9_resolution_ablation.csv"
     },
     "table9b_resolution_significance": {
       "rows": 4,
       "caption": "Difference-in-differences test of the resolution-dependence claim",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table9b_resolution_significance.csv"
+      "path": "/kaggle/working/results/table9b_resolution_significance.csv"
     },
     "table11_data_quality_sensitivity": {
       "rows": 16,
       "caption": "Do the two audit defects change the conclusions? A: missing-report zeros. B: CHIRPS-vs-POWER rainfall mismatch",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table11_data_quality_sensitivity.csv"
+      "path": "/kaggle/working/results/table11_data_quality_sensitivity.csv"
     },
     "table12_seed_stability": {
       "rows": 16,
       "caption": "Ensemble skill against the spread of its individual seeds",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table12_seed_stability.csv"
+      "path": "/kaggle/working/results/table12_seed_stability.csv"
     },
     "table10_forward_test_2026": {
       "rows": 3,
       "caption": "True forward test: model frozen at end-2025, applied to 2026",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table10_forward_test_2026.csv"
+      "path": "/kaggle/working/results/table10_forward_test_2026.csv"
     },
     "table0_assumptions_register": {
       "rows": 22,
       "caption": "Every constant, and whether it was selected empirically or assumed",
-      "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table0_assumptions_register.csv"
+      "path": "/kaggle/working/results/table0_assumptions_register.csv"
     }
   },
   "figures": [

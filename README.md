@@ -37,7 +37,14 @@ The clinical arm has been removed. What follows is what the data supports.
 
 ## Results
 
-One run of `ml_notebook3`, 64 districts x 254 ISO weeks, expanding rolling origin
+**Canonical run:** Kaggle, 5 Sep 2026, `ml_notebook3` at commit `b35c628`
+(Python 3.12.13, pandas 2.3.3, numpy 2.0.2, LightGBM 4.6.0). Every number below and every
+file in `results/` comes from that single execution. It was cross-checked against an
+independent run on a different stack (Python 3.13.5 / pandas 3.0.3 / LightGBM 4.7.0):
+coverage of the reported method agreed to 0.0015, the optimism gap to 0.0024, skill to
+1.83 points, and all 18 calibration and 4 resolution verdicts were identical.
+
+64 districts x 254 ISO weeks, expanding rolling origin
 (train <=2023 -> test 2024; train <=2024 -> test 2025). Every learned model is a mean over
 three seeds; every tuned constant is selected on an inner train<=2022 / validate-2023 split
 that never sees a test year. Significance is Benjamini-Hochberg corrected at q = 0.05.

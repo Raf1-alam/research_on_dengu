@@ -2,8 +2,8 @@ constant,value,basis,evidence
 horizons,"[1, 2, 3, 4]",operational choice,1-4 weeks is the window in which a health directorate can act
 test years,"[2024, 2025]",empirical,"2026 excluded: 1600 rows over 25 pre-monsoon weeks, not a full season; used instead as a frozen forward test in Cell 13"
 selection split,"train<=2022, validate 2023",design,no test year participates in any tuning decision
-tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 20}",SELECTED,"inner-validation MAE sweep, Cell 4b / table1d"
-tweedie_variance_power,1.1,SELECTED,inner-validation MAE sweep over 1.1-1.9
+tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 40}",SELECTED,"inner-validation MAE sweep, Cell 4b / table1d"
+tweedie_variance_power,1.3,SELECTED,inner-validation MAE sweep over 1.1-1.9
 growth objective,L1,SELECTED,"inner-validation MAE, L1 vs L2"
 conformal calibration weeks,"{1: 39, 2: 39, 4: 26}",SELECTED,"inner-validation |coverage - nominal| over 26/39/52, averaged across seeds and chosen per horizon; floored at 26 because the quantile is estimated from independent weeks"
 adaptive conformal gamma,0.05,SELECTED,inner-validation |coverage - nominal| over 0.005-0.10
