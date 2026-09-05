@@ -17,6 +17,20 @@
 > (`results/table1d_model_selection.csv`), with the remaining judgement calls listed in
 > `results/table0_assumptions_register.csv`. Read §1.1-corrected below rather than §4.
 
+> ### Second correction, 5 Sep 2026 (evening)
+>
+> The Kaggle execution of `ml_notebook3` was compared against the local run and the two
+> **disagreed**: same seed, byte-identical inputs, but selected hyperparameters, `tweedie_power`
+> and the calibration window all differed, `level_L2` skill moved 33 points, and two significance
+> verdicts inverted. Cause: every number came from a single LightGBM fit, and cross-run noise
+> exceeded the gap between selection candidates in every decision.
+>
+> Fixed by seed-ensembling every learned model, averaging selection over seeds with a
+> one-standard-error rule, and selecting the calibration window and the adaptive step size
+> empirically. Reproducibility is now verified across two disjoint seed sets: coverage moves by
+> at most 0.003 and every significance verdict agrees. Numbers in section 1.1-corrected below
+> are superseded by `results/` from the current notebook.
+
 ---
 
 # Dengue Bangladesh Early Warning System: Project Analysis & Future Roadmap

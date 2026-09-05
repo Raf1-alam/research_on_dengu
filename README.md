@@ -17,7 +17,7 @@ The following claims appeared here and are withdrawn in full:
 
 | Withdrawn claim | Status |
 |---|---|
-| Optimism gap ΔAUC = +0.4086, ΔRMSE = +610.5, 4.5× error multiplier | No run produced these. Measured gap is **+0.0785 ROC / +0.3199 PR**. |
+| Optimism gap ΔAUC = +0.4086, ΔRMSE = +610.5, 4.5× error multiplier | No run produced these. Measured gap is **+0.0780 ROC / +0.3237 PR**. |
 | Humidity RR = 1.313, DIC reduction 2,553.6, Barishal ζ = 2.10 | **No BYM2 model was ever fitted.** The repository contained no INLA dependency. |
 | Clinical ladder C₀–C₃, n = 2,523 patients, ROC-AUC 0.9996–1.0000 | Derived from `Datasets/dataset.csv`, a **label-conditioned fabrication** — nine columns were appended to a public dataset with values generated from the outcome. Dengue-negatives spanned 36.0–37.6 °C and positives 38.1–40.6 °C with zero overlap across 1,000 patients. |
 | "1,266 district-weeks", "64 districts" (2026-08 framing) | The pipeline of that period never left 8 divisions. |
@@ -37,43 +37,63 @@ The clinical arm has been removed. What follows is what the data supports.
 
 ## Results
 
-One seeded run of `ml_notebook3`, 64 districts × 254 ISO weeks, rolling origin
-(train ≤2023 → test 2024; train ≤2024 → test 2025). Every tuned constant is selected on an inner
-train≤2022 / validate-2023 split that never sees a test year. Significance is Benjamini-Hochberg
-corrected at q = 0.05. All tables in [`results/`](results/).
+One run of `ml_notebook3`, 64 districts x 254 ISO weeks, expanding rolling origin
+(train <=2023 -> test 2024; train <=2024 -> test 2025). Every learned model is a mean over
+three seeds; every tuned constant is selected on an inner train<=2022 / validate-2023 split
+that never sees a test year. Significance is Benjamini-Hochberg corrected at q = 0.05.
+All tables in [`results/`](results/).
 
-**Calibration — the headline.** Nominal 90% intervals, prospective:
+**Reproducibility.** Verified across two disjoint seed sets: coverage of the reported method
+moves by at most 0.003, every significance verdict agrees, the optimism gap by 0.0001 ROC.
+`results/table12_seed_stability.csv` reports the spread behind each number.
 
-| Horizon | Uncalibrated | Split-conformal | Verdict |
-|---|---:|---:|---|
-| 1 week | 0.805 | **0.896** | indistinguishable from 0.90 (p = 0.54) |
-| 2 weeks | 0.786 | 0.919 | over-covers (p = 0.0002) |
-| 4 weeks | 0.780 | **0.905** | indistinguishable from 0.90 (p = 0.54) |
+**Calibration.** Nominal 90% intervals, prospective:
 
-Conformal calibration removes the dangerous under-coverage and lands at or above nominal. It does
-not restore exact nominal coverage at every horizon, and the paper does not claim it does.
+| Horizon | Uncalibrated | Split-conformal | Group-conditional adaptive |
+|---|---:|---:|---:|
+| 1 week | 0.833 | 0.861 | **0.883** |
+| 2 weeks | 0.843 | 0.869 | **0.887** |
+| 4 weeks | 0.842 | 0.868 | **0.893** |
+
+Marginal coverage is only half the story, and the more useful half is conditional. Split
+conformal barely helps there: across burden tertiles its coverage spread stays at
+0.070 (h=2), essentially the 0.077 of the uncalibrated model, because
+one shared correction cannot fix a score distribution that differs by district size. High-burden
+districts sit at 0.835
+while low-burden ones are at 0.905.
+Calibrating within burden groups and letting each group's level adapt over the season closes
+that gap to **0.008** — near-uniform coverage, with the busiest districts no longer
+the worst served.
+
+Coverage does not reach nominal at h = 1 or 2 and we do not claim it does. The residual gap is
+distribution shift between calibration and test seasons, which split conformal cannot remove by
+construction.
 
 **Forecast skill**, MAE reduction against lag-0 persistence:
 
 | Horizon | Level (L2) | Level (Tweedie) | Anchored growth (L1) |
 |---|---:|---:|---:|
-| 1 wk | −32.9% | +8.8% | **+13.6%** |
-| 2 wk | −18.1% | +16.3% | **+23.6%** |
-| 3 wk | −8.1% | **+20.7%** | +9.0% |
-| 4 wk | −7.2% | +18.6% | **+17.5%** |
+| 1 wk | -8.2% | +8.9% | **+14.5%** |
+| 2 wk | -0.5% | +17.6% | **+19.1%** |
+| 3 wk | -3.0% | **+19.0%** | +14.1% |
+| 4 wk | -5.9% | +15.7% | **+15.1%** |
 
-The L2 column is a *misspecification* result, not a target-parameterisation result — squared error
-on 47%-zero counts is the wrong likelihood. Against a properly specified Tweedie level model,
-anchored growth is significantly better only at h = 2.
+The L2 column is a misspecification result, not a target-parameterisation result: squared error on
+47%-zero counts is the wrong likelihood, and it is also the least reproducible model in the study
+(+-10 skill points between seed sets, against +-1.6 for the reported models).
 
 **Optimism gap** (alarm at h = 2, correctly ordered C1 > C3 > C2 > C4):
-0.9819 → 0.9034 ROC-AUC, 0.9312 → 0.6114 PR-AUC. Gap **+0.0785 / +0.3199**.
+0.9821 -> 0.9041 ROC-AUC, 0.9323 -> 0.6087 PR-AUC. Gap **+0.0780 / +0.3237**.
 
-**Operational.** At 80% sensitivity, h = 1: precision 0.561, false-alarm rate 0.129, and a median
-**6 weeks** of warning (IQR 3–12) before a district crosses its own outbreak threshold.
+**Operational.** At 80% sensitivity, h = 1: precision 0.56, false-alarm rate 0.13, and a median
+**6 weeks** of warning before a district crosses its own outbreak threshold.
 
-**Forward test.** Frozen at end-2025 and applied to 2026 without refitting: +18.6 / +20.9 / +27.7%
-skill, conformal coverage 0.912 / 0.903 / 0.902.
+**Forward test.** Frozen at end-2025 and applied to 2026 without refitting: +19 to +24% skill.
+
+**What is not established.** The resolution-dependence claim is directionally consistent at all
+four horizons (+9.6 to +10.7 pp larger gap at 8 divisions than at 64 districts) but reaches
+significance at none of them (h=1: 95% CI [1.6, 13.9], BH p = 0.104). It is reported as a
+direction, not a result.
 
 ---
 
@@ -113,7 +133,7 @@ The notebook cross-checks the panel against sources it was **not** derived from
 ## Layout
 
 ```
-notebooks/ml_notebook3.{ipynb,py}   the pipeline — 19 cells, 18 tables, 6 figures
+notebooks/ml_notebook3.{ipynb,py}   the pipeline — 20 cells, 19 tables, 6 figures
 results/                            every table in the manuscript + run_manifest.json
 figures/                            300 dpi, PNG + PDF, IEEE column widths
 docs/                               implementation plan, dataset dossier, module spec

@@ -1,28 +1,46 @@
 horizon_weeks,method,burden_tertile,n_unit_weeks,coverage,median_width_cases
-1,Quantile LightGBM (uncalibrated),low burden,2310,0.8394,2.08
-1,Quantile LightGBM (uncalibrated),mid burden,2205,0.7896,5.63
-1,Quantile LightGBM (uncalibrated),high burden,2205,0.7828,20.57
-1,Split-conformal CQR,low burden,2310,0.9247,2.69
-1,Split-conformal CQR,mid burden,2205,0.8862,7.07
-1,Split-conformal CQR,high burden,2205,0.8771,26.64
-1,Adaptive conformal (ACI),low burden,2310,0.9225,2.61
-1,Adaptive conformal (ACI),mid burden,2205,0.8839,6.88
-1,Adaptive conformal (ACI),high burden,2205,0.8739,25.87
-2,Quantile LightGBM (uncalibrated),low burden,2310,0.8255,2.34
-2,Quantile LightGBM (uncalibrated),mid burden,2205,0.7669,6.32
-2,Quantile LightGBM (uncalibrated),high burden,2205,0.7646,22.02
-2,Split-conformal CQR,low burden,2310,0.939,4.07
-2,Split-conformal CQR,mid burden,2205,0.912,10.15
-2,Split-conformal CQR,high burden,2205,0.9057,36.06
-2,Adaptive conformal (ACI),low burden,2310,0.9333,3.84
-2,Adaptive conformal (ACI),mid burden,2205,0.9102,9.48
-2,Adaptive conformal (ACI),high burden,2205,0.8993,33.48
-4,Quantile LightGBM (uncalibrated),low burden,2310,0.8303,3.75
-4,Quantile LightGBM (uncalibrated),mid burden,2205,0.7596,8.49
-4,Quantile LightGBM (uncalibrated),high burden,2205,0.7483,27.36
-4,Split-conformal CQR,low burden,2310,0.9463,5.54
-4,Split-conformal CQR,mid burden,2205,0.8889,12.4
-4,Split-conformal CQR,high burden,2205,0.8776,40.61
-4,Adaptive conformal (ACI),low burden,2310,0.9442,5.42
-4,Adaptive conformal (ACI),mid burden,2205,0.8871,12.02
-4,Adaptive conformal (ACI),high burden,2205,0.873,39.87
+1,Quantile LightGBM (uncalibrated),low burden,2310,0.8732,2.25
+1,Quantile LightGBM (uncalibrated),mid burden,2205,0.824,5.49
+1,Quantile LightGBM (uncalibrated),high burden,2205,0.7995,21.49
+1,Split-conformal CQR,low burden,2310,0.8983,2.4
+1,Split-conformal CQR,mid burden,2205,0.8558,6.11
+1,Split-conformal CQR,high burden,2205,0.8281,24.32
+1,Group-conditional conformal (Mondrian),low burden,2310,0.8584,2.25
+1,Group-conditional conformal (Mondrian),mid burden,2205,0.8658,6.48
+1,Group-conditional conformal (Mondrian),high burden,2205,0.8676,28.4
+1,Adaptive conformal (ACI),low burden,2310,0.9156,2.62
+1,Adaptive conformal (ACI),mid burden,2205,0.8812,6.83
+1,Adaptive conformal (ACI),high burden,2205,0.8567,26.97
+1,Group-conditional adaptive conformal,low burden,2310,0.8805,2.31
+1,Group-conditional adaptive conformal,mid burden,2205,0.8848,6.83
+1,Group-conditional adaptive conformal,high burden,2205,0.8853,31.31
+2,Quantile LightGBM (uncalibrated),low burden,2310,0.8835,2.92
+2,Quantile LightGBM (uncalibrated),mid burden,2205,0.8363,7.35
+2,Quantile LightGBM (uncalibrated),high burden,2205,0.8063,26.9
+2,Split-conformal CQR,low burden,2310,0.9052,3.08
+2,Split-conformal CQR,mid burden,2205,0.8639,8.18
+2,Split-conformal CQR,high burden,2205,0.8349,29.67
+2,Group-conditional conformal (Mondrian),low burden,2310,0.8632,2.92
+2,Group-conditional conformal (Mondrian),mid burden,2205,0.8612,8.18
+2,Group-conditional conformal (Mondrian),high burden,2205,0.8744,34.92
+2,Adaptive conformal (ACI),low burden,2310,0.9203,3.37
+2,Adaptive conformal (ACI),mid burden,2205,0.8884,8.94
+2,Adaptive conformal (ACI),high burden,2205,0.8562,33.74
+2,Group-conditional adaptive conformal,low burden,2310,0.8835,3.01
+2,Group-conditional adaptive conformal,mid burden,2205,0.8912,9.22
+2,Group-conditional adaptive conformal,high burden,2205,0.8866,39.52
+4,Quantile LightGBM (uncalibrated),low burden,2310,0.8844,4.42
+4,Quantile LightGBM (uncalibrated),mid burden,2205,0.8322,10.28
+4,Quantile LightGBM (uncalibrated),high burden,2205,0.8068,31.93
+4,Split-conformal CQR,low burden,2310,0.9043,4.61
+4,Split-conformal CQR,mid burden,2205,0.8644,11.02
+4,Split-conformal CQR,high burden,2205,0.8322,34.71
+4,Group-conditional conformal (Mondrian),low burden,2310,0.8597,4.42
+4,Group-conditional conformal (Mondrian),mid burden,2205,0.8794,11.74
+4,Group-conditional conformal (Mondrian),high burden,2205,0.8635,40.02
+4,Adaptive conformal (ACI),low burden,2310,0.9251,5.38
+4,Adaptive conformal (ACI),mid burden,2205,0.8912,13.26
+4,Adaptive conformal (ACI),high burden,2205,0.8649,42.63
+4,Group-conditional adaptive conformal,low burden,2310,0.8944,4.8
+4,Group-conditional adaptive conformal,mid burden,2205,0.893,13.34
+4,Group-conditional adaptive conformal,high burden,2205,0.8916,50.49

@@ -1,17 +1,17 @@
 horizon_weeks,comparison,delta_MAE,boot_lo,boot_hi,boot_excludes_0,DM_t,DM_p_raw,n_units,DM_p_BH,significant
-1,LightGBM anchored growth (L1) vs Lag-0 persistence,-1.232,-1.871,-0.72,True,-2.963,0.0043,64,0.0172,yes (BH q<0.05)
-1,LightGBM level (Tweedie) vs Lag-0 persistence,-0.801,-1.566,-0.111,True,-4.463,0.0,64,0.0,yes (BH q<0.05)
-1,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),-0.43,-1.248,0.106,False,-1.501,0.1383,64,0.2025,no
-1,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-0.519,-0.926,-0.183,True,-1.91,0.0606,64,0.1385,bootstrap only - DM n.s.
-2,LightGBM anchored growth (L1) vs Lag-0 persistence,-2.89,-4.826,-1.404,True,-2.255,0.0276,64,0.0883,bootstrap only - DM n.s.
-2,LightGBM level (Tweedie) vs Lag-0 persistence,-1.988,-3.96,-0.659,True,-1.817,0.074,64,0.148,bootstrap only - DM n.s.
-2,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),-0.902,-1.664,-0.326,True,-3.465,0.001,64,0.0053,yes (BH q<0.05)
-2,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-1.403,-2.614,-0.503,True,-2.045,0.0451,64,0.1203,bootstrap only - DM n.s.
-3,LightGBM anchored growth (L1) vs Lag-0 persistence,-1.427,-4.602,1.378,False,-0.769,0.4445,64,0.4741,no
-3,LightGBM level (Tweedie) vs Lag-0 persistence,-3.298,-7.103,-0.543,True,-1.384,0.1713,64,0.2284,bootstrap only - DM n.s.
-3,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),1.871,0.229,4.002,True,1.711,0.092,64,0.1636,bootstrap only - DM n.s.
-3,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),0.928,0.384,1.496,True,3.826,0.0003,64,0.0024,yes (BH q<0.05)
-4,LightGBM anchored growth (L1) vs Lag-0 persistence,-3.385,-8.369,0.438,False,-1.071,0.2881,64,0.3293,no
-4,LightGBM level (Tweedie) vs Lag-0 persistence,-3.604,-8.748,-0.232,True,-1.264,0.2108,64,0.2594,bootstrap only - DM n.s.
-4,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),0.219,-1.613,2.0,False,0.303,0.7625,64,0.7625,no
-4,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-2.538,-5.604,-0.133,True,-1.498,0.1392,64,0.2025,bootstrap only - DM n.s.
+1,LightGBM anchored growth (L1) vs Lag-0 persistence,-1.319,-1.966,-0.789,True,-3.018,0.0037,64,0.0296,yes (BH q<0.05)
+1,LightGBM level (Tweedie) vs Lag-0 persistence,-0.813,-1.432,-0.387,True,-2.705,0.0088,64,0.0469,yes (BH q<0.05)
+1,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),-0.506,-0.932,-0.196,True,-3.127,0.0027,64,0.0296,yes (BH q<0.05)
+1,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-0.428,-0.846,-0.113,True,-2.491,0.0154,64,0.0616,bootstrap only - DM n.s.
+2,LightGBM anchored growth (L1) vs Lag-0 persistence,-2.336,-3.964,-1.048,True,-2.188,0.0324,64,0.1037,bootstrap only - DM n.s.
+2,LightGBM level (Tweedie) vs Lag-0 persistence,-2.147,-4.158,-0.638,True,-1.643,0.1053,64,0.2808,bootstrap only - DM n.s.
+2,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),-0.189,-0.708,0.4,False,-0.547,0.5865,64,0.6703,no
+2,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-0.571,-1.188,-0.095,True,-1.433,0.1569,64,0.3202,bootstrap only - DM n.s.
+3,LightGBM anchored growth (L1) vs Lag-0 persistence,-2.247,-5.257,0.283,False,-1.238,0.2203,64,0.3916,no
+3,LightGBM level (Tweedie) vs Lag-0 persistence,-3.026,-6.51,-0.559,True,-1.421,0.1601,64,0.3202,bootstrap only - DM n.s.
+3,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),0.779,-0.431,2.396,False,0.984,0.3288,64,0.4384,no
+3,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-0.382,-1.337,0.354,False,-0.64,0.5245,64,0.6455,no
+4,LightGBM anchored growth (L1) vs Lag-0 persistence,-2.931,-7.996,0.919,False,-0.992,0.3251,64,0.4384,no
+4,LightGBM level (Tweedie) vs Lag-0 persistence,-3.048,-8.235,0.557,False,-0.988,0.3271,64,0.4384,no
+4,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),0.117,-1.427,2.232,False,0.127,0.8992,64,0.8992,no
+4,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-0.217,-1.476,0.781,False,-0.322,0.7486,64,0.7985,no
