@@ -1571,27 +1571,52 @@ fig.suptitle("Two-week-ahead forecasts with calibrated intervals", x=0.005, y=1.
              ha="left", fontsize=9)
 _save(fig, "fig3_forecast_with_intervals")
 
-# --- F4: coverage before and after calibration -------------------------------
-fig, ax = plt.subplots(figsize=(COL2 * 0.62, 2.7))
-xs = np.arange(len([1, 2, 4])); w = 0.26
-for i, (key, c, lab) in enumerate([("raw", PAL["purple"], "Uncalibrated"),
-                                   ("split", PAL["green"], "Split conformal"),
-                                   ("mondrian_adaptive", PAL["blue"], "Group-conditional adaptive")]):
+# --- F4: coverage, marginal AND conditional on district burden -------------
+# Dot marks rather than bars: the quantity is a probability read against a
+# reference line, not a magnitude from zero, so the axis can show the range that
+# matters without the truncation a bar chart would smuggle in. In panel (b) the
+# SLOPE is the finding - split conformal falls away with burden just as the
+# uncalibrated model does; the group-conditional method stays flat.
+METHS = [("raw", PAL["purple"], "o", "Uncalibrated"),
+         ("split", PAL["green"], "s", "Split conformal"),
+         ("mondrian_adaptive", PAL["blue"], "^", "Group-conditional adaptive")]
+TERT_ORDER = ["low burden", "mid burden", "high burden"]
+H_COND = 2
+
+fig, (axL, axR) = plt.subplots(1, 2, figsize=(COL2, 2.6), sharey=True)
+
+xs = np.arange(3)
+for key, c, mk, lab in METHS:
     v = [calib[(calib.horizon_weeks == h) & (calib.key == key)].empirical_coverage.iloc[0]
          for h in [1, 2, 4]]
-    ax.bar(xs + (i - 1) * w, v, w * 0.90, color=c, label=lab)
-    for x, val in zip(xs + (i - 1) * w, v):
-        # white halo so a bar that lands on the nominal line stays readable
-        ax.text(x, val + 0.012, f"{val:.2f}", ha="center", fontsize=6.5, color=c,
-                bbox=dict(boxstyle="square,pad=0.08", fc="white", ec="none", alpha=0.85))
-ax.axhline(NOMINAL, color=PAL["grey"], lw=1.0, ls="--", zorder=0)
-ax.annotate("nominal 0.90", (2.62, NOMINAL), textcoords="offset points", xytext=(0, 3),
-            fontsize=7, color=PAL["grey"], ha="left", annotation_clip=False)
-ax.set_xticks(xs); ax.set_xticklabels([f"{h} wk" for h in [1, 2, 4]])
-ax.set_xlim(-0.55, 2.6); ax.set_ylim(0.5, 1.0); ax.set_ylabel("Empirical coverage")
-ax.legend(frameon=False, ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.16),
-          handlelength=1.1, columnspacing=1.2)
-ax.set_title("Interval coverage before and after calibration", loc="left")
+    axL.plot(xs, v, color=c, marker=mk, label=lab, lw=1.3)
+axL.set_xticks(xs); axL.set_xticklabels([f"{h} wk" for h in [1, 2, 4]])
+axL.set_xlim(-0.35, 2.35)
+axL.set_xlabel("Forecast horizon", fontsize=8)
+axL.set_ylabel("Empirical coverage")
+axL.set_title("(a) Marginal", loc="left", fontsize=8.5)
+
+xs = np.arange(len(TERT_ORDER))
+for key, c, mk, lab in METHS:
+    sub = cond[(cond.horizon_weeks == H_COND) & (cond.method == INT_LABEL[key])]
+    v = [sub[sub.burden_tertile == t].coverage.iloc[0] if len(sub[sub.burden_tertile == t]) else np.nan
+         for t in TERT_ORDER]
+    axR.plot(xs, v, color=c, marker=mk, lw=1.3)
+    if np.isfinite(v).all():
+        axR.annotate(f"spread {max(v) - min(v):.3f}", (xs[-1], v[-1]), textcoords="offset points",
+                     xytext=(7, 0), fontsize=6.8, color=c, va="center", annotation_clip=False)
+axR.set_xticks(xs); axR.set_xticklabels(["low", "mid", "high"])
+axR.set_xlim(-0.35, 2.95)
+axR.set_xlabel("District burden tertile", fontsize=8)
+axR.set_title(f"(b) Conditional on burden, h = {H_COND} wk", loc="left", fontsize=8.5)
+
+for ax in (axL, axR):
+    ax.axhline(NOMINAL, color=PAL["grey"], lw=1.0, ls="--", zorder=0)
+    ax.set_ylim(0.78, 0.935)
+axL.annotate("nominal 0.90", (-0.30, NOMINAL), textcoords="offset points", xytext=(0, 4),
+             fontsize=7, color=PAL["grey"], ha="left")
+axL.legend(frameon=False, ncol=3, loc="upper center", bbox_to_anchor=(1.05, -0.22),
+           handlelength=1.4, columnspacing=1.8)
 _save(fig, "fig4_coverage_calibration")
 
 # --- F5: optimism gap, ROC and PR as separate panels (never a dual axis) -----
