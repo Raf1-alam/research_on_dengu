@@ -1,3 +1,24 @@
+> ## ⚠️ CORRECTION NOTICE — 5 Sep 2026
+>
+> **The empirical numbers in §1.1, §4 and §6 of this document come from `ml_notebook2.py`, which
+> was subsequently found to contain four defects that materially inflate them.** The pipeline
+> design described here is sound and was kept; the measurements were not reproducible.
+>
+> | Defect in `ml_notebook2.py` | Effect on the numbers below |
+> |---|---|
+> | `ignition`, `ignition_loose`, `eligible`, `eligible_loose` reached the feature matrix. These are the source deposit's own **forward-looking** labels. | h=2 anchored skill fell from **+21.8% → +11.3%** once removed |
+> | The conformal correction was applied as a single additive offset in **count space**, calibrated on the 2023 epidemic peak, with no per-fold refit | at h=1 the correction computed to **exactly 0.00** — the "calibration" was a no-op; at h=2 it over-corrected to 0.972 |
+> | The spatial holdout used two hand-picked divisions (Khulna, Barishal) | **C4 scored above C2**, which is structurally impossible for a nested holdout |
+> | The alarm threshold was the **full-series** per-district P80, test years included | 62 of 64 districts got a threshold informed by their own test data |
+> | The level baseline ran `objective="regression"` (L2) on 47%-zero counts | the level model was misspecified, not merely worse — with Tweedie it beats anchored growth at h=3 |
+>
+> **Superseded by `notebooks/ml_notebook3.ipynb`.** Verified numbers are in `results/` (18 tables),
+> and every tuned constant is now selected on an inner split that never sees a test year
+> (`results/table1d_model_selection.csv`), with the remaining judgement calls listed in
+> `results/table0_assumptions_register.csv`. Read §1.1-corrected below rather than §4.
+
+---
+
 # Dengue Bangladesh Early Warning System: Project Analysis & Future Roadmap
 **Target Conference:** 7th IEEE ICEEICT 2027 · Military Institute of Science and Technology (MIST), Dhaka  
 **Repository:** [Raf1-alam/research_on_dengu](https://github.com/Raf1-alam/research_on_dengu)  
@@ -21,8 +42,53 @@ All 10 pipeline cells in `notebooks/ml_notebook2.py` have been executed end-to-e
 
 ### 1.2 Git & Version Control Status
 * **Branch:** `main` (Up to date with `origin/main`).
-* **Latest Commit:** `16b2121` (*feat: implement prospective ML pipeline (ml_notebook2) with publication-grade IEEE figures and course correction plan*).
+* **Superseded by:** `notebooks/ml_notebook3.ipynb` (see correction notice above)
+* **Prior commit:** `16b2121` (*feat: implement prospective ML pipeline (ml_notebook2) with publication-grade IEEE figures and course correction plan*).
 * **Working Tree:** Clean. All modifications to `notebooks/ml_notebook2.py` (including publication-grade 300 DPI figure generation code) are tracked and committed.
+
+---
+
+### 1.1-corrected · Verified status (from `ml_notebook3`, 5 Sep 2026)
+
+All figures below are from `results/`, produced by one seeded run, and every tuned constant was
+chosen on a train≤2022 / validate-2023 inner split that never touches 2024 or 2025.
+
+1. **Level-space ML with the wrong likelihood does fail.** L2 on counts loses to persistence at
+   every horizon (−32.9% to −7.2%). But that is a misspecification result, not a target-parameterisation
+   result: with a Tweedie likelihood the same level model gains **+8.8% to +20.7%**.
+2. **Anchored growth wins, but not everywhere and not always significantly.** +13.6 / +23.6 / +9.0 /
+   +17.5% at h = 1/2/3/4. Against Tweedie-level it is significant only at h = 2
+   (BH-adjusted p = 0.005); at h = 3 the level model is ahead. See `table3_uncertainty_on_deltas.csv`.
+3. **Calibration is the strongest result, and it is not a "guarantee".** Uncalibrated coverage is
+   0.780–0.805 for a nominal 0.90. Split-conformal on the log-ratio scale reaches 0.896 (h=1,
+   p = 0.54) and 0.905 (h=4, p = 0.54) — statistically indistinguishable from nominal — but
+   **over-covers at h=2** (0.919, p = 0.0002). Report it as removing the dangerous under-coverage,
+   not as restoring exact nominal coverage.
+4. **Optimism gap, on a coherent matrix.** C1 0.9819 → C2 0.9231 → C3 0.9579 → C4 0.9034 ROC-AUC
+   (correctly ordered). PR-AUC 0.9312 → 0.6114. Gap = **+0.0785 ROC, +0.3199 PR**; PR-AUC degrades
+   about 4× faster than ROC-AUC.
+5. **Operational early warning.** At 80% sensitivity, h=1: precision 0.561, false-alarm rate 0.129.
+   Median **6 weeks** of warning (IQR 3–12) before a district crosses its own outbreak threshold,
+   across 99 district-seasons.
+6. **True forward test on 2026.** Model frozen at end-2025, never refitted: +18.6 / +20.9 / +27.7%
+   skill and conformal coverage 0.912 / 0.903 / 0.902 on data it has never seen.
+7. **Resolution dependence is established only at h = 1.** The anchored-minus-level gap is
+   +13.9 pp larger at 8 divisions than at 64 districts (95% CI [3.5, 19.2], BH p < 0.001).
+   At h = 2, 3 and 4 the difference-in-differences interval spans zero.
+
+### 1.2-corrected · Data-quality caveats that must appear in the paper
+
+* **~10% of the zero-case weeks are missing reports, not true zeros** — 791 district-weeks have
+  `cases = 0` while patients are still admitted. Removing them changes skill by under 1.5 points
+  (`table11_data_quality_sensitivity.csv`), but the 47.3% zero-inflation figure must be quoted
+  with this caveat.
+* **Rainfall sources differ between the two panels** — CHIRPS in the district deposit, NASA POWER
+  in the divisional one (r = 0.86 between products). The resolution result survives dropping
+  rainfall entirely (+13.9 → +13.9 pp at h=1), so it is not driven by the mismatch.
+* **`gtrends_dengue` is effectively a national seasonal clock** — median 4 distinct values per week
+  across 64 districts, 47.5% exact zeros, r = 0.98 with the national series. Describe it as such.
+* **The district deposit's README overstates its 2019 coverage** — it claims an exact match to the
+  official 101,354, but the file sums to 30,257 (30% of the season, rows begin 26 Aug).
 
 ---
 
@@ -77,6 +143,9 @@ $$\text{Full Spatiotemporal Optimism Gap:} \quad \text{OG}_{\text{full}} = \text
 ## 4. Master Empirical Results (Final Publication Numbers)
 
 These verified numbers are generated from the primary dataset and are ready for publication:
+
+> **The tables in this section are the superseded `ml_notebook2` numbers.**
+> Use `results/*.csv` from `ml_notebook3` for anything that goes into the manuscript.
 
 ### Table 1: Official DGHS National Surveillance Reconciliation
 *Panel: 64 Districts × 254 Weeks (2019, 2022–2026) = 16,256 District-Weeks.*

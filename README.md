@@ -1,126 +1,146 @@
-# Fever and Forecast: A Dual-Scale Framework Linking Clinical Dengue Diagnosis to Climate-Driven Outbreak Early Warning in Bangladesh
+# Calibrated Dengue Forecasting for Bangladesh, 2019–2026
 
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Empirical Data: Bangladesh](https://img.shields.io/badge/Data-100%25%20Empirical-success.svg)](#)
+Working repository for a 6-page IEEE conference paper targeting **ICEEICT 2027**
+(7th International Conference on Electrical Engineering and ICT, MIST Dhaka,
+28–30 Jan 2027). Submission deadline **26 Sep 2026**.
 
-> **Official Repository** for the research paper:  
-> *"Fever and Forecast: A Dual-Scale Framework Linking Clinical Dengue Diagnosis to Climate-Driven Outbreak Early Warning in Bangladesh"*
-
----
-
-## 📌 Executive Summary
-
-Dengue surveillance systems traditionally operate at a single spatial or temporal scale, creating a persistent gap between patient bedside diagnostic triage and population outbreak early warning. Furthermore, previous machine learning studies in South Asia have reported near-perfect prospective forecasting accuracy ($\approx 0.99$ ROC-AUC) using retrospective random train/test splits.
-
-This repository provides an end-to-end, 100% empirical, dual-scale framework combining:
-1. **Scale 1 (Individual Clinical Triage - Arm A)**: A 4-tier diagnostic ladder ($C_0 \to C_3$) validated on $2,523$ real Bangladeshi hospital patients (Jamalpur General Hospital $n=1,523$; Dhaka Medical Center $n=1,000$). Validates **Hypothesis H1** (NS1 viremia vs. IgM seroconversion kinetics, identifying a diagnostic crossover at **~Day 3.8 of illness**).
-2. **Scale 2 (Regional Population Early Warning - Arm B)**: Multi-horizon outbreak forecasting ($h \in \{1, 2, 4, 8\}$ weeks ahead) and Bayesian spatio-temporal modeling (BYM2 spatial graph prior on the $64 \times 64$ Queen contiguity Laplacian + RW1 temporal random walks) across **1,266 district-weeks** (2019–2023).
-3. **Multimodal Cross-Scale Coupling (Arm C)**: Feeds local hospital diagnostic test positivity ($\widehat{S}_{d,t}$) into district early warning models, reducing forecast count error by **22.4%**.
-4. **The Quantified Optimism Gap (§4.6)**: Proves mathematically across a formal $2 \times 2$ Combined Validation Matrix that retrospective random splits inflate performance by **$\Delta \text{AUC} = +0.4086$** and underestimate count error by **$4.5\times$** ($+610.5$ cases/week) compared to honest space-time holdouts.
+**Start here:** [`notebooks/ml_notebook3.ipynb`](notebooks/ml_notebook3.ipynb) ·
+[`docs/ICEEICT_2027_Implementation_Plan.md`](docs/ICEEICT_2027_Implementation_Plan.md) ·
+[`docs/DATASET_DOSSIER.md`](docs/DATASET_DOSSIER.md)
 
 ---
 
-## 🗂️ Repository Structure
+## Retraction notice
 
-```text
-dengue_paper/
-│
-├── notebooks/                                # Complete 5-Notebook Pipeline
-│   ├── 01_data_assembly_and_panel_engineering.ipynb   # Merges DGHS, NASA POWER, ERA5, BBS Census
-│   ├── 01_data_assembly_and_panel_engineering.py
-│   ├── 02_clinical_diagnostic_models.ipynb            # Clinical Ladder C0->C3 & Hypothesis H1
-│   ├── 02_clinical_diagnostic_models.py
-│   ├── 03_population_outbreak_models.ipynb            # ML Hierarchy P0->P5 & Optimism Gap
-│   ├── 03_population_outbreak_models.py
-│   ├── 04_bayesian_spatiotemporal_inla.ipynb          # BYM2 ICAR Spatial + RW1 Temporal Model
-│   ├── 04_bayesian_spatiotemporal_inla.py
-│   ├── 05_results_synthesis_and_publication_figures.ipynb # Compiles Tables 1-5 & Figures 1-5
-│   └── 05_results_synthesis_and_publication_figures.py
-│
-├── dengue_bangladesh_paper.md                # Comprehensive Paper Manuscript Draft
-├── dengue_bangladesh_methodology.md          # Formal Mathematical & Methodological Protocol
-├── comprehensive_findings_audit_and_shiddik_comparison.md # Audit vs. Shiddik et al. (2026)
-│
-├── notebook1_accomplishments_and_audit.md    # Methodological audit for Notebook 1
-├── notebook2_accomplishments_and_audit.md    # Methodological audit for Notebook 2
-├── notebook3_accomplishments_and_audit.md    # Methodological audit for Notebook 3
-├── notebook4_accomplishments_and_audit.md    # Methodological audit for Notebook 4
-├── notebook5_accomplishments_and_audit.md    # Methodological audit for Notebook 5
-│
-└── .gitignore                                # Repository hygiene
+**An earlier version of this README reported results that no committed run had produced.**
+The following claims appeared here and are withdrawn in full:
+
+| Withdrawn claim | Status |
+|---|---|
+| Optimism gap ΔAUC = +0.4086, ΔRMSE = +610.5, 4.5× error multiplier | No run produced these. Measured gap is **+0.0785 ROC / +0.3199 PR**. |
+| Humidity RR = 1.313, DIC reduction 2,553.6, Barishal ζ = 2.10 | **No BYM2 model was ever fitted.** The repository contained no INLA dependency. |
+| Clinical ladder C₀–C₃, n = 2,523 patients, ROC-AUC 0.9996–1.0000 | Derived from `Datasets/dataset.csv`, a **label-conditioned fabrication** — nine columns were appended to a public dataset with values generated from the outcome. Dengue-negatives spanned 36.0–37.6 °C and positives 38.1–40.6 °C with zero overlap across 1,000 patients. |
+| "1,266 district-weeks", "64 districts" (2026-08 framing) | The pipeline of that period never left 8 divisions. |
+| 22.4% cross-scale error reduction | No run produced it. |
+| "100% Empirical" badge, "zero synthetic imputation" | The opposite was true. |
+
+The underlying serology dataset is also degenerate: in the original Mendeley release
+(`10.17632/zdtc3n6xv2`) **`Outcome == IgG` for 1,000 of 1,000 rows** — the label is a copy of a
+predictor. The same file is mirrored on Kaggle (`kawsarahmad/dengue-dataset-bangladesh`) and
+Hugging Face (`fairhealth/bangladesh-dengue`) under three DOIs. **A new mirror is not a new
+dataset.** Both files are quarantined in [`unused/`](unused/README.md) with the reasoning written
+down so nobody re-imports them.
+
+The clinical arm has been removed. What follows is what the data supports.
+
+---
+
+## Results
+
+One seeded run of `ml_notebook3`, 64 districts × 254 ISO weeks, rolling origin
+(train ≤2023 → test 2024; train ≤2024 → test 2025). Every tuned constant is selected on an inner
+train≤2022 / validate-2023 split that never sees a test year. Significance is Benjamini-Hochberg
+corrected at q = 0.05. All tables in [`results/`](results/).
+
+**Calibration — the headline.** Nominal 90% intervals, prospective:
+
+| Horizon | Uncalibrated | Split-conformal | Verdict |
+|---|---:|---:|---|
+| 1 week | 0.805 | **0.896** | indistinguishable from 0.90 (p = 0.54) |
+| 2 weeks | 0.786 | 0.919 | over-covers (p = 0.0002) |
+| 4 weeks | 0.780 | **0.905** | indistinguishable from 0.90 (p = 0.54) |
+
+Conformal calibration removes the dangerous under-coverage and lands at or above nominal. It does
+not restore exact nominal coverage at every horizon, and the paper does not claim it does.
+
+**Forecast skill**, MAE reduction against lag-0 persistence:
+
+| Horizon | Level (L2) | Level (Tweedie) | Anchored growth (L1) |
+|---|---:|---:|---:|
+| 1 wk | −32.9% | +8.8% | **+13.6%** |
+| 2 wk | −18.1% | +16.3% | **+23.6%** |
+| 3 wk | −8.1% | **+20.7%** | +9.0% |
+| 4 wk | −7.2% | +18.6% | **+17.5%** |
+
+The L2 column is a *misspecification* result, not a target-parameterisation result — squared error
+on 47%-zero counts is the wrong likelihood. Against a properly specified Tweedie level model,
+anchored growth is significantly better only at h = 2.
+
+**Optimism gap** (alarm at h = 2, correctly ordered C1 > C3 > C2 > C4):
+0.9819 → 0.9034 ROC-AUC, 0.9312 → 0.6114 PR-AUC. Gap **+0.0785 / +0.3199**.
+
+**Operational.** At 80% sensitivity, h = 1: precision 0.561, false-alarm rate 0.129, and a median
+**6 weeks** of warning (IQR 3–12) before a district crosses its own outbreak threshold.
+
+**Forward test.** Frozen at end-2025 and applied to 2026 without refitting: +18.6 / +20.9 / +27.7%
+skill, conformal coverage 0.912 / 0.903 / 0.902.
+
+---
+
+## Data
+
+Verified by direct download and audit — not from the depositors' descriptions.
+
+| Path | Source | Unit | Span |
+|---|---|---|---|
+| `data/raw/district_panel/` | figshare [10.6084/m9.figshare.33040637](https://doi.org/10.6084/m9.figshare.33040637), CC BY 4.0 | district-week, 64 units | 2019 + 2022–2026, 16,256 rows |
+| `data/raw/divisional/` | DGHS daily bulletins + NASA POWER harvest | division-week, 8 units | 2022–2025 |
+| `data/raw/coxsbazar/` | Zenodo [10.5281/zenodo.19219551](https://doi.org/10.5281/zenodo.19219551), CC BY 4.0 | patient | 2021–2024, 35,581 rows |
+| `data/raw/clinical/` | Mendeley [10.17632/6fsrsk3mb8](https://doi.org/10.17632/6fsrsk3mb8) | patient | 2024, n = 1,523 |
+
+The notebook cross-checks the panel against sources it was **not** derived from
+(`results/table1c_external_cross_checks.csv`):
+
+* cases vs the independently compiled divisional bulletin — **r = 0.9994**, 86.6% exact match,
+  totals within 0.51% over 1,600 division-weeks
+* climate vs an independent NASA POWER harvest — temperature **r = 0.9975**, humidity **r = 0.9881**
+
+**Known caveats**, all reported in `results/table1b_data_quality.csv` and tested in
+`table11_data_quality_sensitivity.csv`:
+
+* ~10% of zero-case weeks are missing reports, not true zeros (791 rows have `cases = 0` while
+  patients are still admitted). Conclusions survive their removal; the 47.3% zero-inflation figure
+  must carry this caveat.
+* Rainfall is CHIRPS in the district panel and NASA POWER in the divisional one (r = 0.86 between
+  products). The resolution result survives dropping rainfall entirely.
+* `gtrends_dengue` is effectively a national seasonal clock — median 4 distinct values per week
+  across 64 districts, 47.5% exact zeros, r = 0.98 with the national series.
+* The district deposit's README claims its 2019 season matches the official 101,354; the file sums
+  to 30,257 (rows begin 26 Aug, ~30% of the season).
+
+---
+
+## Layout
+
+```
+notebooks/ml_notebook3.{ipynb,py}   the pipeline — 19 cells, 18 tables, 6 figures
+results/                            every table in the manuscript + run_manifest.json
+figures/                            300 dpi, PNG + PDF, IEEE column widths
+docs/                               implementation plan, dataset dossier, module spec
+data/raw/                           the four verified datasets
+unused/                             quarantined — read unused/README.md before touching
 ```
 
----
+## Reproducing
 
-## 🔬 Core Scientific Findings
-
-### 1. The Quantified Optimism Gap (Table 4 & Figure 4)
-
-$$\mathbf{\text{Optimism Gap}} = \mathbf{\text{Condition 1 (Single Split)} - \text{Condition 4 (Space-Time Holdout)} = +0.4086 \text{ ROC-AUC}}$$
-$$\mathbf{\Delta \text{RMSE}} = \mathbf{+610.5 \text{ cases/week (4.5x Error Multiplier)}}$$
-
-| Validation Condition | Outbreak ROC-AUC | Count RMSE (Cases/Week) | Interpretation |
-|---|:---:|:---:|---|
-| **Condition 1 (Single Random Split)** | **0.9505** | **171.6** | Flattering, inflated retrospective baseline (comparable to Shiddik et al. 2026). |
-| **Condition 2 (Temporal Rolling-Origin Holdout)** | **0.6927** | **360.0** | Honest prospective time-series evaluation across 2021–2023. |
-| **Condition 3 (Spatial 5-Block Leave-Out)** | **0.8858** | **439.1** | Geographic transferability to unseen administrative blocks. |
-| **Condition 4 (Combined Space + Time Holdout)** | **0.5419** | **782.1** | **Fully honest operational deployment** in unseen districts during unseen future years. |
-
-### 2. Clinical Diagnostic Ladder (Arm A, Table 2)
-
-* **Tier $C_0$ (Pre-Test Symptoms, $n=1,000$)**: ROC-AUC **0.9996**, Sensitivity **99.1%**, Specificity **98.7%**.
-* **Tier $C_1$ (Single NS1 Antigen)**: ROC-AUC **0.9999**, Accuracy **99.8%**, Specificity **100.0%**.
-* **Tier $C_2$ (Combined Serology)**: ROC-AUC **1.0000** (NS1 + IgM).
-* **Tier $C_3$ (Extended CBC + NLR/PLR in Resource-Limited Hospital, $n=1,523$)**: ROC-AUC **0.6878**, PR-AUC **0.7822**, **Sensitivity 95.1%**, F1-score **0.851**. Outperformed external Pakistani benchmark (Qaiser et al. 2024: 88.0% sensitivity, 79.0% specificity).
-
-### 3. Bayesian Spatio-Temporal Model (Arm B Bayesian, Table 5)
-
-* **Model Selection**: Model $B_2$ (BYM2 Spatial Prior + RW1 Temporal Random Walk) was decisively selected by DIC, slashing deviance by **$2,553.6$ points** over fixed effects alone.
-* **Key Meteorological Drivers**:
-  * **Relative Humidity**: $\text{RR} = 1.313$ ($95\% \text{ CI: } [1.214, 1.420]$) -> $+31.3\%$ risk increase per $+1\text{ SD}$.
-  * **Maximum Temperature**: $\text{RR} = 1.179$ ($95\% \text{ CI: } [1.090, 1.276]$).
-  * **Mean Temperature**: $\text{RR} = 1.172$ ($95\% \text{ CI: } [1.084, 1.268]$).
-* **Endemic Reservoirs**: Controlling for population scale and hospital beds, the southern coastal belt (**Barishal $\zeta = 2.10$, Khulna $\zeta = 1.33$**) exhibits more than **twice the residual ecological transmission risk** of northern districts.
-
----
-
-## 🚀 Quickstart & Execution
-
-All code runs sequentially without requiring external database servers or GPU acceleration.
-
-### Option 1: Local Execution
 ```bash
-git clone https://github.com/<your-username>/<repo-name>.git
-cd dengue_paper
-
-# Install dependencies
-pip install numpy pandas scipy scikit-learn xgboost shap matplotlib seaborn pyarrow
-
-# Run pipeline scripts
-python notebooks/01_data_assembly_and_panel_engineering.py
-python notebooks/02_clinical_diagnostic_models.py
-python notebooks/03_population_outbreak_models.py
-python notebooks/04_bayesian_spatiotemporal_inla.py
-python notebooks/05_results_synthesis_and_publication_figures.py
+pip install numpy pandas scipy scikit-learn lightgbm matplotlib seaborn
+python notebooks/ml_notebook3.py          # ~8 min on 4 CPU cores; no GPU needed
 ```
 
-### Option 2: Interactive Jupyter Notebooks
-Run the notebooks in sequential order (`01` $\to$ `05`) in VS Code, JupyterLab, or on Kaggle.
+On Kaggle, attach `data/raw/district_panel/Dengue.csv`,
+`data/raw/divisional/divisional_daily_2022_2025.csv` and
+`data/raw/divisional/nasa_power_divisions_daily.csv` as one dataset, set **Accelerator: None**,
+and run. Tree models on 16k rows are faster on CPU than on a T4.
 
----
+The run stops itself if anything is wrong: five gate assertions cover leaked features, DGHS
+reconciliation, lags bridging the 2020–21 data gap, validation-matrix ordering, and whether the
+conformal correction actually did anything.
 
-## 📜 Citation & Attribution
+## Ground rules
 
-If you use this codebase, methodology, or empirical findings, please cite:
-```bibtex
-@article{alam2026feverandforecast,
-  title={Fever and Forecast: A Dual-Scale Framework Linking Clinical Dengue Diagnosis to Climate-Driven Outbreak Early Warning in Bangladesh},
-  author={Alam, Syed Rafi and Collaborators},
-  journal={Working Paper / Under Review},
-  year={2026}
-}
-```
-
----
-*Developed with rigorous epidemiological standards, zero synthetic imputation, and prospective validation integrity.*
+1. Every number in the manuscript traces to a file in `results/`. Run first, then quote.
+2. No claim ships without a committed run behind it.
+3. Baselines are mandatory comparators and get the same information the model gets.
+4. Headline deltas carry block-bootstrap intervals and a panel Diebold-Mariano test. If an
+   interval spans zero, that is what gets reported.
