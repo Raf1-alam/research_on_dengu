@@ -19,3 +19,7 @@ __pycache__/
 *.tmp
 # Scratch and temporary scripts
 scratch/
+
+# Large raw inputs are tracked deliberately: this project has a history of
+# unreproducible claims, so the repo is kept self-contained.
+!data/raw/**
