@@ -37,72 +37,77 @@ The clinical arm has been removed. What follows is what the data supports.
 
 ## Results
 
-**Canonical run:** Kaggle, 5 Sep 2026, `ml_notebook3` at commit `b35c628`
-(Python 3.12.13, pandas 2.3.3, numpy 2.0.2, LightGBM 4.6.0). Every number below and every
-file in `results/` comes from that single execution. It was cross-checked against an
-independent run on a different stack (Python 3.13.5 / pandas 3.0.3 / LightGBM 4.7.0):
-coverage of the reported method agreed to 0.0015, the optimism gap to 0.0024, skill to
-1.83 points, and all 18 calibration and 4 resolution verdicts were identical.
+**Canonical run:** Kaggle, 5 Sep 2026, `ml_notebook3` at commit `7d76129`
+(Python 3.12.13, pandas 2.3.3, numpy 2.0.2, LightGBM 4.6.0). Every number below and every file
+in `results/` comes from that single execution. Cross-checked against an independent run on a
+different stack (Python 3.13.5 / pandas 3.0.3 / LightGBM 4.7.0): coverage of the reported method
+agreed to **0.0015**, the optimism gap to **0.0024**, skill to **1.83 points**, the ARIMA row to
+**0.08 points**, and all 18 calibration and 4 resolution verdicts were identical.
 
-64 districts x 254 ISO weeks, expanding rolling origin
-(train <=2023 -> test 2024; train <=2024 -> test 2025). Every learned model is a mean over
-three seeds; every tuned constant is selected on an inner train<=2022 / validate-2023 split
-that never sees a test year. Significance is Benjamini-Hochberg corrected at q = 0.05.
-All tables in [`results/`](results/).
+64 districts x 254 ISO weeks, expanding rolling origin (train <=2023 -> test 2024;
+train <=2024 -> test 2025). Every learned model is a mean over three seeds; every tuned constant
+is selected on an inner train<=2022 / validate-2023 split that never sees a test year.
+Significance is Benjamini-Hochberg corrected at q = 0.05. All tables in [`results/`](results/).
 
-**Reproducibility.** Verified across two disjoint seed sets: coverage of the reported method
-moves by at most 0.003, every significance verdict agrees, the optimism gap by 0.0001 ROC.
-`results/table12_seed_stability.csv` reports the spread behind each number.
-
-**Calibration.** Nominal 90% intervals, prospective:
+**Calibration — marginal coverage is not the useful number.** Nominal 90% intervals, prospective:
 
 | Horizon | Uncalibrated | Split-conformal | Group-conditional adaptive |
 |---|---:|---:|---:|
-| 1 week | 0.833 | 0.861 | **0.883** |
-| 2 weeks | 0.843 | 0.869 | **0.887** |
-| 4 weeks | 0.842 | 0.868 | **0.893** |
+| 1 week | 0.822 | 0.871 | **0.885** |
+| 2 weeks | 0.844 | 0.874 | **0.887** |
+| 4 weeks | 0.834 | 0.869 | **0.893** |
 
-Marginal coverage is only half the story, and the more useful half is conditional. Split
-conformal barely helps there: across burden tertiles its coverage spread stays at
-0.070 (h=2), essentially the 0.077 of the uncalibrated model, because
-one shared correction cannot fix a score distribution that differs by district size. High-burden
-districts sit at 0.835
-while low-burden ones are at 0.905.
-Calibrating within burden groups and letting each group's level adapt over the season closes
-that gap to **0.008** — near-uniform coverage, with the busiest districts no longer
-the worst served.
-
-Coverage does not reach nominal at h = 1 or 2 and we do not claim it does. The residual gap is
+Coverage does not reach nominal at h = 1 or 2 and we do not claim it does; the residual gap is
 distribution shift between calibration and test seasons, which split conformal cannot remove by
 construction.
 
-**Forecast skill**, MAE reduction against lag-0 persistence:
+The finding is conditional, not marginal. Across district burden tertiles at h = 2, split
+conformal leaves a spread of **0.066** — barely below the uncalibrated model's
+**0.073** — with high-burden districts at 0.841 against
+0.907 for low-burden. One shared correction cannot fix a score
+distribution that differs by district size. Calibrating within burden groups and letting each
+group's level adapt over the season closes the spread to **0.010**, so the busiest
+districts are no longer the worst served.
 
-| Horizon | Level (L2) | Level (Tweedie) | Anchored growth (L1) |
-|---|---:|---:|---:|
-| 1 wk | -8.2% | +8.9% | **+14.5%** |
-| 2 wk | -0.5% | +17.6% | **+19.1%** |
-| 3 wk | -3.0% | **+19.0%** | +14.1% |
-| 4 wk | -5.9% | +15.7% | **+15.1%** |
+Prior work has reported *marginal* conformal coverage for dengue (Rio de Janeiro, 2025); this is
+the multi-unit result a single-city study cannot produce. See `docs/RELATED_WORK_NOTES.md`.
 
-The L2 column is a misspecification result, not a target-parameterisation result: squared error on
-47%-zero counts is the wrong likelihood, and it is also the least reproducible model in the study
-(+-10 skill points between seed sets, against +-1.6 for the reported models).
+**Forecast skill**, MAE reduction against lag-0 persistence, with baselines:
+
+| Horizon | Seasonal naive | ARIMA(2,1,2) | Level (L2) | Level (Tweedie) | Anchored growth |
+|---|---:|---:|---:|---:|---:|
+| 1 wk | -409.2% | -47.6% | -36.8% | +9.4% | **+13.4%** |
+| 2 wk | -278.8% | -41.6% | -20.3% | +17.5% | **+20.1%** |
+| 3 wk | -196.8% | -34.1% | -11.4% | **+20.8%** | +16.0% |
+| 4 wk | -149.3% | -30.0% | -11.0% | **+16.3%** | +16.1% |
+
+The ARIMA order is Naher et al.'s, selected on national *monthly* data; applied here at
+district-week resolution with 47% zeros it is out of regime. Read that row as *the published
+statistical benchmark does not transfer to operational resolution*, not as a win — see
+`table0_assumptions_register.csv`. The L2 column is likewise a misspecification result, and the
+least reproducible model in the study.
+
+**Uncertainty on the comparisons.** `table3` reports effects with block-bootstrap intervals and
+BH-corrected p-values, and deliberately carries **no significance label**: three such labels
+flipped between platforms while every point estimate agreed to 0.291 MAE and all 20 intervals
+overlapped. Of 16 model comparisons the bootstrap excludes zero in 8 — two test seasons cannot
+resolve differences of this size, and the paper says so.
 
 **Optimism gap** (alarm at h = 2, correctly ordered C1 > C3 > C2 > C4):
-0.9821 -> 0.9041 ROC-AUC, 0.9323 -> 0.6087 PR-AUC. Gap **+0.0780 / +0.3237**.
+0.9822 -> 0.9046 ROC-AUC,
+0.9326 -> 0.6114 PR-AUC.
+Gap **+0.0776 / +0.3213**.
 
-**Operational.** At 80% sensitivity, h = 1: precision 0.56, false-alarm rate 0.13, and a median
+**Operational.** At 80% sensitivity, h = 1: precision 0.56, false-alarm rate 0.13, median
 **6 weeks** of warning before a district crosses its own outbreak threshold.
 
-**Forward test.** Frozen at end-2025 and applied to 2026 without refitting: +19 to +24% skill.
+**Forward test.** Frozen at end-2025, applied to 2026 without refitting: +18.6 to +23.5% skill.
 
-**What is not established.** The resolution-dependence claim is directionally consistent at all
-four horizons (+9.6 to +10.7 pp larger gap at 8 divisions than at 64 districts) but reaches
-significance at none of them (h=1: 95% CI [1.6, 13.9], BH p = 0.104). It is reported as a
-direction, not a result.
-
----
+**What is not established.** Resolution dependence is directionally consistent at all four
+horizons but significant at none (h=1 BH p = 0.104). No individual climate variable's
+contribution is identifiable: leave-one-out deltas sit inside seed noise and **change sign
+between platforms for 4 of 10 variables**, so the redundancy question cannot be settled here in
+either direction.
 
 ## Data
 

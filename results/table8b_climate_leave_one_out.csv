@@ -1,0 +1,13 @@
+horizon_weeks,variable_removed,n_features,MAE_anchored,delta_MAE_vs_full,seed_noise_MAE_sd,exceeds_seed_noise,skill_vs_persistence_pct
+1,(none),52,8.124,0.0,0.116,False,10.5
+1,rain,45,8.1,-0.024,0.116,False,10.76
+1,temp_mean,45,8.15,0.026,0.116,False,10.21
+1,temp_min,48,8.101,-0.023,0.116,False,10.75
+1,temp_max,48,8.04,-0.083,0.116,False,11.42
+1,humidity,45,8.074,-0.049,0.116,False,11.04
+2,(none),52,10.495,0.0,0.084,False,14.22
+2,rain,45,10.585,0.09,0.084,True,13.48
+2,temp_mean,45,10.472,-0.023,0.084,False,14.41
+2,temp_min,48,10.571,0.076,0.084,False,13.6
+2,temp_max,48,10.568,0.074,0.084,False,13.62
+2,humidity,45,10.576,0.081,0.084,False,13.55

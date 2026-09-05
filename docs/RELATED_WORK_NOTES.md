@@ -5,6 +5,30 @@ methodological detail that bears on this study. **The PDFs are deliberately not
 committed** — the set mixes CC-BY and subscription titles, and redistributing the
 latter from a public repository is a licensing problem. Retrieve them by DOI.
 
+## The closest prior work — read this before writing Section II
+
+### Assessing dengue forecasting methods, Rio de Janeiro (2025) · [PMC11984044](https://pmc.ncbi.nlm.nih.gov/articles/PMC11984044/)
+
+**This paper already does most of our methodological stack and must be cited as closest
+prior work.** Weekly dengue, 2016–2023, a 6-year moving-window validation (not a single
+split), AR/MA/ARIMA/ETS/VAR/SARIMAX against SVM/RF/XGBoost/LSTM/Prophet, **adaptive
+conformal prediction** for intervals, and **empirical 95% coverage reported by horizon**.
+
+Consequences for our framing:
+
+* **"First to validate interval coverage in dengue forecasting" is FALSE.** Do not write it.
+  Conformal prediction, adaptive conformal, rolling-origin evaluation and empirical coverage
+  reporting have all been done for dengue.
+* What they cannot do is **stratify**: Rio de Janeiro is a single city, so coverage is
+  aggregated over all observations with no grouping. Our contribution is what only a
+  multi-unit panel can show — that marginal coverage conceals a large conditional failure
+  (high-burden districts 0.841 against 0.907 for low-burden under split conformal, spread
+  0.066, closed to 0.010 by group-conditional calibration).
+* Position the paper as **extending** this work from one city to 64 districts, and as showing
+  that the marginal number it reports is not sufficient in a multi-district system.
+* Their LSTM/Prophet comparison also answers the "where is the deep learning?" objection
+  without us having to run one.
+
 ## Bears directly on our claims
 
 ### Al Mobin (2024) · *Scientific Reports* 14:32073 · [10.1038/s41598-024-83770-0](https://doi.org/10.1038/s41598-024-83770-0)
@@ -30,10 +54,12 @@ by AIC/BIC. **Reports 80% and 95% prediction intervals.**
 
 Two consequences:
 
-1. **A claim had to be softened.** "No study in this literature reports prediction intervals" is
-   false. The defensible and still-novel claim: intervals are occasionally reported but their
-   **empirical coverage has never been evaluated** — Naher plots model-based ARIMA bands and
-   never checks whether they contain the truth.
+1. **A claim had to be softened, twice.** "No study in this literature reports prediction
+   intervals" is false — Naher reports them. And "coverage has never been evaluated for dengue"
+   is also false: the Rio de Janeiro study above evaluates it. What survives is narrow and
+   specific: within the **Bangladeshi** literature intervals are occasionally reported and never
+   validated, and **nowhere in the dengue literature is coverage reported conditionally across
+   spatial units.**
 2. **A baseline had to be added.** ARIMA(2,1,2) is now in the suite (`table2`). Note the
    regime caveat in `table0_assumptions_register.csv`: the order was selected on national
    monthly data and is applied here at district-week resolution with 47% zeros. Report it as

@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-09-05T10:45:58+00:00",
+  "generated_utc": "2026-09-05T21:15:37+00:00",
   "seed": 42,
   "test_years": [
     2024,
@@ -86,12 +86,12 @@
       "path": "/kaggle/working/results/table1d_model_selection.csv"
     },
     "table2_forecast_shootout": {
-      "rows": 32,
-      "caption": "Multi-horizon prospective forecast comparison, district resolution",
+      "rows": 36,
+      "caption": "Multi-horizon prospective forecast comparison, district resolution. The ARIMA row uses a published order fitted at a different resolution - see table0 before quoting it",
       "path": "/kaggle/working/results/table2_forecast_shootout.csv"
     },
     "table3_uncertainty_on_deltas": {
-      "rows": 16,
+      "rows": 20,
       "caption": "Block-bootstrap intervals and panel Diebold-Mariano tests, Benjamini-Hochberg corrected at q=0.05. Effects and intervals, not significance labels - see the note in this cell",
       "path": "/kaggle/working/results/table3_uncertainty_on_deltas.csv"
     },
@@ -130,6 +130,11 @@
       "caption": "Marginal value of each covariate group, anchored-growth model",
       "path": "/kaggle/working/results/table8_covariate_ablation.csv"
     },
+    "table8b_climate_leave_one_out": {
+      "rows": 12,
+      "caption": "Leave-one-climate-variable-out. A positive delta means removing the variable hurt. Compare every delta against seed_noise_MAE_sd before reading anything into it: at this resolution none of them clears it, so individual climate contributions are not separately identifiable",
+      "path": "/kaggle/working/results/table8b_climate_leave_one_out.csv"
+    },
     "table9_resolution_ablation": {
       "rows": 32,
       "caption": "Skill by spatial resolution, shared feature set only",
@@ -156,7 +161,7 @@
       "path": "/kaggle/working/results/table10_forward_test_2026.csv"
     },
     "table0_assumptions_register": {
-      "rows": 22,
+      "rows": 23,
       "caption": "Every constant, and whether it was selected empirically or assumed",
       "path": "/kaggle/working/results/table0_assumptions_register.csv"
     }
