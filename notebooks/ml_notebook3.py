@@ -741,6 +741,61 @@ class _EnsQ:
     def predict(self, X): return np.mean([m.predict(X) for m in self.models], axis=0)
 
 
+from statsmodels.tsa.arima.model import ARIMA
+warnings.filterwarnings("ignore", module="statsmodels")
+
+ARIMA_ORDER = (2, 1, 2)   # Naher et al. (2022) selected ARIMA(2,1,2) for Bangladeshi
+                          # dengue by AIC/BIC - but on NATIONAL MONTHLY counts, a smooth
+                          # series. Applied here at district-week resolution, where 47% of
+                          # observations are zero, it is outside the regime it was chosen
+                          # for. Report it as "the published benchmark does not transfer to
+                          # the operational resolution", never as "our model beats ARIMA":
+                          # the order was not re-selected for this data and doing so would
+                          # be the fair comparison.
+_ARIMA_CACHE = {}
+
+
+def arima_baseline(M, h, test_years=TEST_YEARS, tag=""):
+    """Per-unit ARIMA on log1p counts, rolled through the test year without refitting.
+
+    At each test-week origin the model forecasts h steps ahead, then the observed
+    value is appended (refit=False, so the state updates but the parameters do not).
+    That mirrors how the tree models are used: parameters estimated once per fold on
+    strictly earlier data, then applied forward.
+    """
+    key = (tag, h, tuple(test_years))
+    if key in _ARIMA_CACHE:
+        return _ARIMA_CACHE[key]
+    rows = []
+    for ty in test_years:
+        for u, g in M[M.year <= ty].groupby("unit"):
+            g = g.sort_values("week_start")
+            tr = g[g.year < ty]
+            te = g[(g.year == ty) & g[f"target_lead_{h}w"].notna()]
+            if len(tr) < 30 or not len(te):
+                continue
+            y_tr = np.log1p(tr["cases"].values.astype(float))
+            try:
+                res = ARIMA(y_tr, order=ARIMA_ORDER).fit()
+            except Exception:
+                continue
+            y_te = np.log1p(te["cases"].values.astype(float))
+            for i, (_, r) in enumerate(te.iterrows()):
+                try:
+                    f = float(res.forecast(h)[-1])
+                except Exception:
+                    f = y_te[i]
+                rows.append({"unit": u, "week_start": r["week_start"],
+                             "arima": max(0.0, float(np.expm1(f)))})
+                try:
+                    res = res.append([y_te[i]], refit=False)
+                except Exception:
+                    break
+    out = pd.DataFrame(rows)
+    _ARIMA_CACHE[key] = out
+    return out
+
+
 def metrics(y, p):
     y = np.asarray(y, float); p = np.clip(np.asarray(p, float), 0, None)
     m = np.isfinite(y) & np.isfinite(p)
@@ -761,7 +816,7 @@ GROWTH_OBJECTIVES = {
     "L1": dict(objective="regression_l1"),   # median of the log-ratio
 }
 
-def rolling_origin(M, F, h, test_years=TEST_YEARS):
+def rolling_origin(M, F, h, test_years=TEST_YEARS, arima_tag=None):
     """Expanding-window rolling origin. Returns one long frame of aligned predictions."""
     tl, tg = f"target_lead_{h}w", f"target_growth_{h}w"
     frames = []
@@ -814,18 +869,29 @@ def rolling_origin(M, F, h, test_years=TEST_YEARS):
             out["ridge_ar4"] = out["persistence"]
 
         frames.append(out)
-    return pd.concat(frames, ignore_index=True)
+    P = pd.concat(frames, ignore_index=True)
+    # ARIMA is independent of the feature set, so it is computed once per panel and
+    # merged in; the ablation and resolution loops reuse the cache.
+    if arima_tag:
+        A = arima_baseline(M, h, test_years, tag=arima_tag)
+        if len(A):
+            P = P.merge(A, on=["unit", "week_start"], how="left")
+            P["arima"] = P["arima"].fillna(P["persistence"])
+        else:
+            P["arima"] = P["persistence"]
+    return P
 
 
-PRED = {h: rolling_origin(MD, FD_FULL, h) for h in HORIZONS}
+PRED = {h: rolling_origin(MD, FD_FULL, h, arima_tag="district") for h in HORIZONS}
 log.info("rolling-origin predictions built for h = %s", HORIZONS)
 
 SEED_COLS = lambda df: [c for c in df.columns if c.startswith("__seed")]
 
-MODELS = ["persistence", "snaive", "ridge_ar4",
+MODELS = ["persistence", "snaive", "arima", "ridge_ar4",
           "level_L2", "level_Poisson", "level_Tweedie",
           "anchored_L2", "anchored_L1"]
 LABELS = {"persistence": "Lag-0 persistence", "snaive": "Seasonal naive",
+          "arima": f"ARIMA{ARIMA_ORDER} per district (order from Naher 2022, national monthly)",
           "ridge_ar4": "Log-AR(4) ridge",
           "level_L2": "LightGBM level (L2)",
           "level_Poisson": "LightGBM level (Poisson)",
@@ -838,13 +904,17 @@ rows = []
 for h in HORIZONS:
     P = PRED[h]; base = mean_absolute_error(P.y, P.persistence)
     for m in MODELS:
+        if m not in P.columns:
+            continue
         mm = metrics(P.y, P[m])
         rows.append({"horizon_weeks": h, "model": LABELS[m], "key": m,
                      "MAE": round(mm["MAE"], 3), "RMSE": round(mm["RMSE"], 3),
                      "wMAPE_pct": round(mm["wMAPE"], 2),
                      "skill_vs_persistence_pct": round(100 * (1 - mm["MAE"] / base), 2)})
 shootout = save_table("table2_forecast_shootout", pd.DataFrame(rows),
-                      "Multi-horizon prospective forecast comparison, district resolution")
+                      "Multi-horizon prospective forecast comparison, district resolution. "
+                      "The ARIMA row uses a published order fitted at a different "
+                      "resolution - see table0 before quoting it")
 print(shootout.pivot_table(index="horizon_weeks", columns="model",
                            values="skill_vs_persistence_pct").round(1).to_string())
 
@@ -902,7 +972,10 @@ rows = []
 for h in HORIZONS:
     P = PRED[h]
     for a, b in [("anchored_L1", "persistence"), ("level_Tweedie", "persistence"),
-                 ("anchored_L1", "level_Tweedie"), ("anchored_L1", "anchored_L2")]:
+                 ("anchored_L1", "level_Tweedie"), ("anchored_L1", "anchored_L2"),
+                 ("anchored_L1", "arima")]:
+        if a not in P.columns or b not in P.columns:
+            continue
         lo, hi = block_bootstrap_delta(P, a, b)
         t, pv, nu = panel_dm(P, a, b)
         rows.append({"horizon_weeks": h, "comparison": f"{LABELS[a]} vs {LABELS[b]}",
@@ -1704,6 +1777,12 @@ ASSUMPTIONS = pd.DataFrame([
     ("interval method reported", "group-conditional adaptive conformal", "empirical",
      "marginal coverage of a single shared correction was ~0.90 in low-burden districts "
      "and ~0.83 in high-burden ones; calibrating within burden tertiles closes that gap"),
+    ("ARIMA order", str(ARIMA_ORDER), "from the literature, OUT OF REGIME",
+     "Naher et al. (2022) selected ARIMA(2,1,2) on national MONTHLY counts. Applied "
+     "here to district-week counts that are 47% zeros it is outside its design regime "
+     "and loses to persistence. Evidence that the published benchmark does not transfer "
+     "to operational resolution - NOT evidence that our model beats ARIMA, since the "
+     "order was not re-selected for this data"),
     ("seed ensemble", str(SEEDS), "design",
      "single-seed estimates moved by up to 7.6 skill points between runs; every learned "
      "model is the mean over these seeds and table12 reports the member spread"),
