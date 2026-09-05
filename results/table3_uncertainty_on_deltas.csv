@@ -1,17 +1,17 @@
-horizon_weeks,comparison,delta_MAE,boot_lo,boot_hi,boot_excludes_0,DM_t,DM_p_raw,n_units,DM_p_BH,significant
-1,LightGBM anchored growth (L1) vs Lag-0 persistence,-1.319,-1.966,-0.789,True,-3.018,0.0037,64,0.0296,yes (BH q<0.05)
-1,LightGBM level (Tweedie) vs Lag-0 persistence,-0.813,-1.432,-0.387,True,-2.705,0.0088,64,0.0469,yes (BH q<0.05)
-1,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),-0.506,-0.932,-0.196,True,-3.127,0.0027,64,0.0296,yes (BH q<0.05)
-1,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-0.428,-0.846,-0.113,True,-2.491,0.0154,64,0.0616,bootstrap only - DM n.s.
-2,LightGBM anchored growth (L1) vs Lag-0 persistence,-2.336,-3.964,-1.048,True,-2.188,0.0324,64,0.1037,bootstrap only - DM n.s.
-2,LightGBM level (Tweedie) vs Lag-0 persistence,-2.147,-4.158,-0.638,True,-1.643,0.1053,64,0.2808,bootstrap only - DM n.s.
-2,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),-0.189,-0.708,0.4,False,-0.547,0.5865,64,0.6703,no
-2,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-0.571,-1.188,-0.095,True,-1.433,0.1569,64,0.3202,bootstrap only - DM n.s.
-3,LightGBM anchored growth (L1) vs Lag-0 persistence,-2.247,-5.257,0.283,False,-1.238,0.2203,64,0.3916,no
-3,LightGBM level (Tweedie) vs Lag-0 persistence,-3.026,-6.51,-0.559,True,-1.421,0.1601,64,0.3202,bootstrap only - DM n.s.
-3,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),0.779,-0.431,2.396,False,0.984,0.3288,64,0.4384,no
-3,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-0.382,-1.337,0.354,False,-0.64,0.5245,64,0.6455,no
-4,LightGBM anchored growth (L1) vs Lag-0 persistence,-2.931,-7.996,0.919,False,-0.992,0.3251,64,0.4384,no
-4,LightGBM level (Tweedie) vs Lag-0 persistence,-3.048,-8.235,0.557,False,-0.988,0.3271,64,0.4384,no
-4,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),0.117,-1.427,2.232,False,0.127,0.8992,64,0.8992,no
-4,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-0.217,-1.476,0.781,False,-0.322,0.7486,64,0.7985,no
+horizon_weeks,comparison,delta_MAE,boot_lo,boot_hi,boot_excludes_0,DM_t,DM_p_raw,n_units,DM_p_BH,dm_reject_BH,evidence
+1,LightGBM anchored growth (L1) vs Lag-0 persistence,-1.319,-1.966,-0.789,True,-3.018,0.0037,64,0.0296,True,both tests
+1,LightGBM level (Tweedie) vs Lag-0 persistence,-0.813,-1.432,-0.387,True,-2.705,0.0088,64,0.0469,True,both tests
+1,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),-0.506,-0.932,-0.196,True,-3.127,0.0027,64,0.0296,True,both tests
+1,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-0.428,-0.846,-0.113,True,-2.491,0.0154,64,0.0616,False,bootstrap only
+2,LightGBM anchored growth (L1) vs Lag-0 persistence,-2.336,-3.964,-1.048,True,-2.188,0.0324,64,0.1037,False,bootstrap only
+2,LightGBM level (Tweedie) vs Lag-0 persistence,-2.147,-4.158,-0.638,True,-1.643,0.1053,64,0.2808,False,bootstrap only
+2,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),-0.189,-0.708,0.4,False,-0.547,0.5865,64,0.6703,False,neither
+2,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-0.571,-1.188,-0.095,True,-1.433,0.1569,64,0.3202,False,bootstrap only
+3,LightGBM anchored growth (L1) vs Lag-0 persistence,-2.247,-5.257,0.283,False,-1.238,0.2203,64,0.3916,False,neither
+3,LightGBM level (Tweedie) vs Lag-0 persistence,-3.026,-6.51,-0.559,True,-1.421,0.1601,64,0.3202,False,bootstrap only
+3,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),0.779,-0.431,2.396,False,0.984,0.3288,64,0.4384,False,neither
+3,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-0.382,-1.337,0.354,False,-0.64,0.5245,64,0.6455,False,neither
+4,LightGBM anchored growth (L1) vs Lag-0 persistence,-2.931,-7.996,0.919,False,-0.992,0.3251,64,0.4384,False,neither
+4,LightGBM level (Tweedie) vs Lag-0 persistence,-3.048,-8.235,0.557,False,-0.988,0.3271,64,0.4384,False,neither
+4,LightGBM anchored growth (L1) vs LightGBM level (Tweedie),0.117,-1.427,2.232,False,0.127,0.8992,64,0.8992,False,neither
+4,LightGBM anchored growth (L1) vs LightGBM anchored growth (L2),-0.217,-1.476,0.781,False,-0.322,0.7486,64,0.7985,False,neither

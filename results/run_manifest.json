@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-09-05T09:38:25+00:00",
+  "generated_utc": "2026-09-05T10:26:06+00:00",
   "seed": 42,
   "test_years": [
     2024,
@@ -92,7 +92,7 @@
     },
     "table3_uncertainty_on_deltas": {
       "rows": 16,
-      "caption": "Block-bootstrap intervals and panel Diebold-Mariano tests, Benjamini-Hochberg corrected at q=0.05",
+      "caption": "Block-bootstrap intervals and panel Diebold-Mariano tests, Benjamini-Hochberg corrected at q=0.05. Effects and intervals, not significance labels - see the note in this cell",
       "path": "E:\\3-2\\Machine Learning Lab\\artifacts\\results\\table3_uncertainty_on_deltas.csv"
     },
     "table4_interval_calibration": {

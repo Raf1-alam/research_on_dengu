@@ -914,14 +914,29 @@ unc = pd.DataFrame(rows)
 # One family of tests, so the p-values are corrected together.
 rej, adj = bh_fdr(unc["DM_p_raw"].values, q=ALPHA)
 unc["DM_p_BH"] = np.round(adj, 4)
-unc["significant"] = np.where(rej & unc["boot_excludes_0"], f"yes (BH q<{ALPHA})",
-                       np.where(rej, "DM only - bootstrap spans 0",
-                       np.where(unc["boot_excludes_0"], "bootstrap only - DM n.s.", "no")))
+
+# No binary significant/not column. Comparing the previous version's Kaggle and
+# local runs showed three of these labels flipping between platforms while the
+# point estimates agreed to 0.29 MAE and all sixteen bootstrap intervals overlapped:
+# the estimates are reproducible, a step function evaluated at its discontinuity is
+# not. What is reported instead is the effect and its interval, plus which of the two
+# tests each comparison satisfies, so the reader can see where they disagree.
+unc["dm_reject_BH"] = rej
+unc["evidence"] = np.where(rej & unc["boot_excludes_0"], "both tests",
+                    np.where(rej, "DM only",
+                      np.where(unc["boot_excludes_0"], "bootstrap only", "neither")))
 uncert = save_table("table3_uncertainty_on_deltas", unc,
                     f"Block-bootstrap intervals and panel Diebold-Mariano tests, "
-                    f"Benjamini-Hochberg corrected at q={ALPHA}")
+                    f"Benjamini-Hochberg corrected at q={ALPHA}. Effects and intervals, "
+                    f"not significance labels - see the note in this cell")
 print(uncert[["horizon_weeks", "comparison", "delta_MAE", "boot_lo", "boot_hi",
-              "DM_p_raw", "DM_p_BH", "significant"]].to_string(index=False))
+              "DM_p_BH", "evidence"]].to_string(index=False))
+_b = int(uncert.boot_excludes_0.sum()); _d = int(uncert.dm_reject_BH.sum())
+_both = int((uncert.evidence == "both tests").sum())
+log.info("evidence across %d comparisons: bootstrap excludes zero in %d, "
+         "Diebold-Mariano rejects in %d, both agree in %d. The remainder are "
+         "underpowered - two test seasons cannot resolve differences of this size.",
+         len(uncert), _b, _d, _both)
 
 
 # %%
