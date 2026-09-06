@@ -1,0 +1,5 @@
+horizon_weeks,n_seeds,anchored_mean_skill,anchored_sd,level_mean_skill,level_sd,paired_diff,ci_lo,ci_hi,cohens_dz,p_paired_t,p_wilcoxon,p_BH,verdict
+1,20,13.76,1.06,8.63,0.95,5.127,4.492,5.763,3.534,0.0,0.0,0.0,anchored better
+2,20,18.37,2.35,17.51,0.68,0.86,-0.298,2.017,0.325,0.16191,0.18935,0.18575,no detectable difference
+3,20,14.13,1.93,18.55,1.47,-4.417,-5.708,-3.126,-1.499,0.0,1e-05,0.0,level better
+4,20,16.69,3.41,15.54,1.3,1.15,-0.492,2.792,0.307,0.18575,0.09731,0.18575,no detectable difference

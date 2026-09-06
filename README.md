@@ -53,24 +53,54 @@ Significance is Benjamini-Hochberg corrected at q = 0.05. All tables in [`result
 
 | Horizon | Uncalibrated | Split-conformal | Group-conditional adaptive |
 |---|---:|---:|---:|
-| 1 week | 0.822 | 0.871 | **0.885** |
-| 2 weeks | 0.844 | 0.874 | **0.887** |
-| 4 weeks | 0.834 | 0.869 | **0.893** |
+| 1 week | 0.822 | 0.868 | **0.884** |
+| 2 weeks | 0.844 | 0.873 | **0.887** |
+| 4 weeks | 0.834 | 0.868 | **0.892** |
 
 Coverage does not reach nominal at h = 1 or 2 and we do not claim it does; the residual gap is
 distribution shift between calibration and test seasons, which split conformal cannot remove by
 construction.
 
 The finding is conditional, not marginal. Across district burden tertiles at h = 2, split
-conformal leaves a spread of **0.066** — barely below the uncalibrated model's
-**0.073** — with high-burden districts at 0.841 against
-0.907 for low-burden. One shared correction cannot fix a score
+conformal leaves a spread of **0.069** — barely below the uncalibrated model's
+**0.073** — with high-burden districts at 0.839 against
+0.908 for low-burden. One shared correction cannot fix a score
 distribution that differs by district size. Calibrating within burden groups and letting each
-group's level adapt over the season closes the spread to **0.010**, so the busiest
+group's level adapt over the season closes the spread to **0.011**, so the busiest
 districts are no longer the worst served.
 
 Prior work has reported *marginal* conformal coverage for dengue (Rio de Janeiro, 2025); this is
 the multi-unit result a single-city study cannot produce. See `docs/RELATED_WORK_NOTES.md`.
+
+**The conditional failure, formally tested.** Two-proportion test of low- versus
+high-burden coverage, h = 2:
+
+| Method | Low burden | High burden | Difference | z | p (BH) |
+|---|---:|---:|---:|---:|---:|
+| Uncalibrated | 0.883 | 0.810 | 0.073 | 6.86 | <1e-10 |
+| Split-conformal | 0.908 | 0.839 | **0.069** | **7.03** | <1e-10 |
+| Group-conditional adaptive | 0.883 | 0.887 | **-0.004** | -0.41 | **0.87** |
+
+Split conformal leaves a burden gap statistically indistinguishable from doing nothing.
+The group-conditional method eliminates it, at h = 1, 2 and 4 alike. Spread reduction
+0.052-0.061, district-resampling bootstrap p = 0.004-0.019.
+
+Mechanism: per-district coverage against log burden rho = -0.604 (p < 1e-6), against log
+population rho = -0.164 (p = 0.20, **not** associated). District size is not the explanation.
+
+**Target parameterisation is horizon-dependent, not uniformly better.** Twenty seeds, each
+fitting both models on the same folds so seed is a blocking factor:
+
+| Horizon | Anchored | Level (Tweedie) | Paired difference | 95% CI | Cohen dz | Verdict |
+|---|---:|---:|---:|---|---:|---|
+| 1 wk | 13.76% | 8.63% | **+5.13** | [4.49, 5.76] | 3.53 | anchored better |
+| 2 wk | 18.37% | 17.51% | +0.86 | [-0.30, 2.02] | 0.33 | no difference |
+| 3 wk | 14.13% | 18.55% | **-4.42** | [-5.71, -3.13] | -1.50 | **level better** |
+| 4 wk | 16.69% | 15.54% | +1.15 | [-0.49, 2.79] | 0.31 | no difference |
+
+Anchoring on the last observation helps while the anchor is fresh and hurts once it is
+stale. This is a crossover, and the paper must not be framed as "our reparameterisation
+wins".
 
 **Forecast skill**, MAE reduction against lag-0 persistence, with baselines:
 

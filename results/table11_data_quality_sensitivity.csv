@@ -1,12 +1,12 @@
 sensitivity,horizon_weeks,variant,n_rows,rows_dropped_pct,anchored_skill_pct,level_Tweedie_skill_pct,boot_lo,boot_hi,boot_p,verdict
 A · missing-report zeros,1,all rows,6720.0,0.0,13.45,9.45,,,,
 A · missing-report zeros,1,report-gap rows removed,6720.0,0.0,13.45,9.45,,,,
-A · missing-report zeros (coverage),1,all rows,6720.0,0.0,0.8708,,,,,
-A · missing-report zeros (coverage),1,report-gap rows removed,6720.0,0.0,0.8708,,,,,
+A · missing-report zeros (coverage),1,all rows,6720.0,0.0,0.868,,,,,
+A · missing-report zeros (coverage),1,report-gap rows removed,6720.0,0.0,0.868,,,,,
 A · missing-report zeros,2,all rows,6720.0,0.0,20.07,17.54,,,,
 A · missing-report zeros,2,report-gap rows removed,6720.0,0.0,20.07,17.54,,,,
-A · missing-report zeros (coverage),2,all rows,6720.0,0.0,0.8738,,,,,
-A · missing-report zeros (coverage),2,report-gap rows removed,6720.0,0.0,0.8738,,,,,
+A · missing-report zeros (coverage),2,all rows,6720.0,0.0,0.8731,,,,,
+A · missing-report zeros (coverage),2,report-gap rows removed,6720.0,0.0,0.8731,,,,,
 B · rain source mismatch,1,with rain,,,12.63,,3.9,17.31,0.0,gap is larger at coarse resolution
 B · rain source mismatch,1,rain removed,,,15.37,,5.71,19.92,0.0,gap is larger at coarse resolution
 B · rain source mismatch,2,with rain,,,11.31,,-5.37,30.39,0.2475,no significant resolution effect

@@ -15,11 +15,11 @@ tweedie_variance_power,1.7,50.5116,0.2125,False
 tweedie_variance_power,1.9,59.4764,0.1297,False
 growth objective,L1,47.4609,1.507,True
 growth objective,L2,69.68,2.1197,False
-conformal calibration weeks (h=1),26,0.0277,,False
-conformal calibration weeks (h=1),39,0.008,,True
+conformal calibration weeks (h=1),26,0.0169,,False
+conformal calibration weeks (h=1),39,0.0084,,True
 conformal calibration weeks (h=1),52,inf,,False
-conformal calibration weeks (h=2),26,0.0511,,False
-conformal calibration weeks (h=2),39,0.0495,,True
+conformal calibration weeks (h=2),26,0.0522,,False
+conformal calibration weeks (h=2),39,0.0499,,True
 conformal calibration weeks (h=2),52,inf,,False
 conformal calibration weeks (h=4),26,0.9,,True
 conformal calibration weeks (h=4),39,0.9,,False

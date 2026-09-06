@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-09-05T21:15:37+00:00",
+  "generated_utc": "2026-09-06T14:59:08+00:00",
   "seed": 42,
   "test_years": [
     2024,
@@ -105,6 +105,21 @@
       "caption": "Coverage conditional on district burden tertile",
       "path": "/kaggle/working/results/table5_conditional_coverage.csv"
     },
+    "table5b_conditional_coverage_test": {
+      "rows": 9,
+      "caption": "Two-proportion test of low- vs high-burden coverage, per method",
+      "path": "/kaggle/working/results/table5b_conditional_coverage_test.csv"
+    },
+    "table5c_spread_reduction": {
+      "rows": 3,
+      "caption": "Bootstrap of the coverage-spread reduction from group-conditional calibration, resampling districts",
+      "path": "/kaggle/working/results/table5c_spread_reduction.csv"
+    },
+    "table5d_coverage_covariates": {
+      "rows": 3,
+      "caption": "Per-district coverage under split conformal against burden and the size covariates burden might be proxying for",
+      "path": "/kaggle/working/results/table5d_coverage_covariates.csv"
+    },
     "table6_optimism_gap": {
       "rows": 5,
       "caption": "2x2 space-time validation matrix",
@@ -155,13 +170,18 @@
       "caption": "Ensemble skill against the spread of its individual seeds",
       "path": "/kaggle/working/results/table12_seed_stability.csv"
     },
+    "table13_paired_seed_comparison": {
+      "rows": 4,
+      "caption": "Anchored growth vs Tweedie level across 20 paired seeds; seed is a blocking factor so the comparison is paired, not two ensembles",
+      "path": "/kaggle/working/results/table13_paired_seed_comparison.csv"
+    },
     "table10_forward_test_2026": {
       "rows": 3,
       "caption": "True forward test: model frozen at end-2025, applied to 2026",
       "path": "/kaggle/working/results/table10_forward_test_2026.csv"
     },
     "table0_assumptions_register": {
-      "rows": 23,
+      "rows": 24,
       "caption": "Every constant, and whether it was selected empirically or assumed",
       "path": "/kaggle/working/results/table0_assumptions_register.csv"
     }

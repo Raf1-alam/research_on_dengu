@@ -9,6 +9,7 @@ conformal calibration weeks,"{1: 39, 2: 39, 4: 26}",SELECTED,"inner-validation |
 adaptive conformal gamma,0.05,SELECTED,inner-validation |coverage - nominal| over 0.005-0.10
 interval method reported,group-conditional adaptive conformal,empirical,marginal coverage of a single shared correction was ~0.90 in low-burden districts and ~0.83 in high-burden ones; calibrating within burden tertiles closes that gap
 ARIMA order,"(2, 1, 2)","from the literature, OUT OF REGIME","Naher et al. (2022) selected ARIMA(2,1,2) on national MONTHLY counts. Applied here to district-week counts that are 47% zeros it is outside its design regime and loses to persistence. Evidence that the published benchmark does not transfer to operational resolution - NOT evidence that our model beats ARIMA, since the order was not re-selected for this data"
+paired-comparison seeds,20,power analysis,three seeds could not resolve a 2.53-point difference against a 5.95-point seed sd; the paired design blocks on seed and uses this many
 seed ensemble,"[42, 7, 1]",design,single-seed estimates moved by up to 7.6 skill points between runs; every learned model is the mean over these seeds and table12 reports the member spread
 nominal coverage,0.9,reporting convention,90% is standard for epidemic forecast hubs
 significance level,0.05,convention,0.05 two-sided; every family of tests is Benjamini-Hochberg corrected

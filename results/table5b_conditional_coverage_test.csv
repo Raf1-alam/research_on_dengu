@@ -1,0 +1,10 @@
+horizon_weeks,method,coverage_low_burden,coverage_high_burden,difference,ci_lo,ci_hi,z,p_raw,p_BH,verdict
+1,Quantile LightGBM (uncalibrated),0.8606,0.7883,0.0723,0.0505,0.0941,6.458,0.0,0.0,coverage differs by burden (BH q<0.05)
+1,Split-conformal CQR,0.9082,0.8312,0.0771,0.0578,0.0963,7.779,0.0,0.0,coverage differs by burden (BH q<0.05)
+1,Group-conditional adaptive conformal,0.8827,0.8827,0.0,-0.0186,0.0186,0.0,1.0,1.0,no detectable difference by burden
+2,Quantile LightGBM (uncalibrated),0.8831,0.8104,0.0727,0.0521,0.0934,6.861,0.0,0.0,coverage differs by burden (BH q<0.05)
+2,Split-conformal CQR,0.9078,0.839,0.0688,0.0498,0.0879,7.034,0.0,0.0,coverage differs by burden (BH q<0.05)
+2,Group-conditional adaptive conformal,0.8827,0.8866,-0.0039,-0.0223,0.0145,-0.414,0.678527,0.872392,no detectable difference by burden
+4,Quantile LightGBM (uncalibrated),0.8797,0.8,0.0797,0.0586,0.1007,7.381,0.0,0.0,coverage differs by burden (BH q<0.05)
+4,Split-conformal CQR,0.9082,0.8307,0.0775,0.0582,0.0968,7.817,0.0,0.0,coverage differs by burden (BH q<0.05)
+4,Group-conditional adaptive conformal,0.8918,0.89,0.0017,-0.0162,0.0197,0.189,0.850275,0.956559,no detectable difference by burden
