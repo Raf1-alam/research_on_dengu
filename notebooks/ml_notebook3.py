@@ -660,12 +660,13 @@ def _cal_score(cw, h=2, seed=None):
                               objective="quantile", alpha=a).fit(tr2[FSEL], tr2[tg])
          for a in (0.05, 0.95)}
     cl, ch = q[0.05].predict(cal[FSEL]), q[0.95].predict(cal[FSEL])
-    cw_ = np.maximum(ch - cl, 1e-6)
+    _wf = max(float(np.quantile(ch - cl, 0.05)), 1e-3)
+    cw_ = np.maximum(ch - cl, _wf)
     sc = np.maximum(cl - cal[tg].values, cal[tg].values - ch) / cw_
     n = len(sc); qh = np.quantile(sc, min(1.0, np.ceil((n + 1) * NOMINAL) / n))
     anc = _va["cases_lag0"].values + 1.0
     vl, vh = q[0.05].predict(_va[FSEL]), q[0.95].predict(_va[FSEL])
-    vw = np.maximum(vh - vl, 1e-6)
+    vw = np.maximum(vh - vl, _wf)
     lo = anc * np.exp(vl - qh * vw) - 1
     hi = anc * np.exp(vh + qh * vw) - 1
     y = _va[tl].values
@@ -923,10 +924,19 @@ print(shootout.pivot_table(index="horizon_weeks", columns="model",
 # =============================================================================
 # CELL 6 — Block bootstrap + Diebold–Mariano on the headline deltas
 # =============================================================================
-def block_bootstrap_delta(P, a, b, n_boot=2000, seed=SEED):
-    """95% interval on MAE(a) - MAE(b), resampling whole (unit, fold) blocks."""
+def block_bootstrap_delta(P, a, b, n_boot=2000, seed=SEED, level="unit"):
+    """95% interval on MAE(a) - MAE(b), resampling whole blocks.
+
+    level="unit"  : (district, fold) blocks - preserves serial correlation.
+    level="block" : (division, fold) blocks - ALSO preserves the spatial correlation
+                    between neighbouring districts, which the unit-level version
+                    ignores. Districts in this panel are spatially autocorrelated
+                    (Hossain 2024), so unit-level intervals are anti-conservative.
+                    Only 8 divisions, so these intervals are wide and honest.
+    """
     rng = np.random.default_rng(seed)
-    blocks = list(P.groupby(["unit", "fold"]).indices.values())
+    key = ["unit", "fold"] if level == "unit" else ["block", "fold"]
+    blocks = list(P.groupby(key).indices.values())
     y, pa, pb = P.y.values, P[a].values, P[b].values
     draws = np.empty(n_boot)
     for i in range(n_boot):
@@ -977,11 +987,14 @@ for h in HORIZONS:
         if a not in P.columns or b not in P.columns:
             continue
         lo, hi = block_bootstrap_delta(P, a, b)
+        slo, shi = block_bootstrap_delta(P, a, b, level="block")
         t, pv, nu = panel_dm(P, a, b)
         rows.append({"horizon_weeks": h, "comparison": f"{LABELS[a]} vs {LABELS[b]}",
                      "delta_MAE": round(mean_absolute_error(P.y, P[a]) - mean_absolute_error(P.y, P[b]), 3),
                      "boot_lo": round(lo, 3), "boot_hi": round(hi, 3),
                      "boot_excludes_0": bool(lo * hi > 0),
+                     "spatial_boot_lo": round(slo, 3), "spatial_boot_hi": round(shi, 3),
+                     "spatial_boot_excludes_0": bool(slo * shi > 0),
                      "DM_t": round(t, 3), "DM_p_raw": round(pv, 4), "n_units": nu})
 unc = pd.DataFrame(rows)
 # One family of tests, so the p-values are corrected together.
@@ -998,12 +1011,21 @@ unc["dm_reject_BH"] = rej
 unc["evidence"] = np.where(rej & unc["boot_excludes_0"], "both tests",
                     np.where(rej, "DM only",
                       np.where(unc["boot_excludes_0"], "bootstrap only", "neither")))
+# The spatially-blocked interval is the conservative one: it is the number to quote
+# if any single interval is quoted, because districts are not independent.
+unc["survives_spatial_blocking"] = unc["spatial_boot_excludes_0"]
 uncert = save_table("table3_uncertainty_on_deltas", unc,
                     f"Block-bootstrap intervals and panel Diebold-Mariano tests, "
                     f"Benjamini-Hochberg corrected at q={ALPHA}. Effects and intervals, "
                     f"not significance labels - see the note in this cell")
 print(uncert[["horizon_weeks", "comparison", "delta_MAE", "boot_lo", "boot_hi",
-              "DM_p_BH", "evidence"]].to_string(index=False))
+              "spatial_boot_lo", "spatial_boot_hi", "DM_p_BH", "evidence",
+              "survives_spatial_blocking"]].to_string(index=False))
+log.info("of %d comparisons, %d have unit-level intervals excluding zero but only %d "
+         "survive spatial blocking - districts are not independent and the unit-level "
+         "interval is anti-conservative",
+         len(uncert), int(uncert.boot_excludes_0.sum()),
+         int(uncert.survives_spatial_blocking.sum()))
 _b = int(uncert.boot_excludes_0.sum()); _d = int(uncert.dm_reject_BH.sum())
 _both = int((uncert.evidence == "both tests").sum())
 log.info("evidence across %d comparisons: bootstrap excludes zero in %d, "
@@ -1092,10 +1114,15 @@ def interval_run(M, F, h, method, test_years=TEST_YEARS, gamma=None, groups=None
             # on high-variance weeks and applied to low-variance ones (or the reverse)
             # over- or under-corrects; a multiplicative one travels between regimes.
             c_lo, c_hi = q[0.05](cal[F]), q[0.95](cal[F])
-            c_w = np.maximum(c_hi - c_lo, 1e-6)
+            # Floor the denominator at the 5th percentile of observed calibration
+            # widths rather than 1e-6. A near-degenerate predicted interval otherwise
+            # divides the score into the thousands, which is numerically ugly even
+            # though the 90th-percentile quantile survives it.
+            w_floor = max(float(np.quantile(c_hi - c_lo, 0.05)), 1e-3)
+            c_w = np.maximum(c_hi - c_lo, w_floor)
             s = np.maximum(c_lo - cal[tg].values, cal[tg].values - c_hi) / c_w
             g_lo, g_hi, g_md = (q[0.05](te[F]), q[0.95](te[F]), q[0.50](te[F]))
-            t_w = np.maximum(g_hi - g_lo, 1e-6)
+            t_w = np.maximum(g_hi - g_lo, w_floor)
 
             if method == "raw":
                 qh_vec = np.zeros(len(te))
@@ -1217,6 +1244,116 @@ for h in [1, 2, 4]:
 cond = save_table("table5_conditional_coverage", pd.DataFrame(rows),
                   "Coverage conditional on district burden tertile")
 print(cond[cond.horizon_weeks == 2].to_string(index=False))
+
+
+# %%
+# =============================================================================
+# CELL 8b — Is the conditional-coverage difference real, and is it burden?
+# =============================================================================
+# The audit found that the paper's lead result was the only untested one: the
+# spread of coverage across burden tertiles was reported descriptively. Two
+# questions are settled here. (a) Is the spread significantly non-zero for each
+# method, and is the reduction between methods significant? (b) Is "burden" the
+# right explanation, or a proxy for district size / reporting intensity?
+
+def _two_prop(k1, n1, k2, n2):
+    """Two-proportion z-test with a Wald CI on the difference."""
+    p1, p2 = k1 / n1, k2 / n2
+    pp = (k1 + k2) / (n1 + n2)
+    se0 = np.sqrt(pp * (1 - pp) * (1 / n1 + 1 / n2))
+    z = (p1 - p2) / se0 if se0 > 0 else np.nan
+    se = np.sqrt(p1 * (1 - p1) / n1 + p2 * (1 - p2) / n2)
+    return float(p1 - p2), float(z), float(2 * (1 - stats.norm.cdf(abs(z)))), \
+           float(p1 - p2 - 1.96 * se), float(p1 - p2 + 1.96 * se)
+
+
+def _spread_boot(I, groups, n_boot=2000, seed=SEED):
+    """Bootstrap the max-min coverage spread across groups, resampling DISTRICTS."""
+    rng = np.random.default_rng(seed)
+    I = I.assign(_g=I["unit"].map(groups), _c=((I.y >= I.lo) & (I.y <= I.hi)).astype(float))
+    units = I["unit"].unique()
+    idx = {u: I.index[I.unit == u].values for u in units}
+    out = []
+    for _ in range(n_boot):
+        pick = np.concatenate([idx[u] for u in rng.choice(units, len(units), replace=True)])
+        gg = I.loc[pick].groupby("_g")["_c"].mean()
+        if len(gg) >= 2:
+            out.append(gg.max() - gg.min())
+    return np.asarray(out)
+
+
+cc_rows, sp_rows = [], []
+for h in [1, 2, 4]:
+    for meth in ["raw", "split", "mondrian_adaptive"]:
+        I = INTERVALS[(h, meth)].copy()
+        I["_g"] = I["unit"].map(BURDEN_G)
+        cov = I.assign(_c=((I.y >= I.lo) & (I.y <= I.hi)).astype(int)).groupby("_g")["_c"]
+        agg = cov.agg(["sum", "count"])
+        if {0, 2} <= set(agg.index):
+            dlt, z, pv, lo_, hi_ = _two_prop(agg.loc[0, "sum"], agg.loc[0, "count"],
+                                             agg.loc[2, "sum"], agg.loc[2, "count"])
+            cc_rows.append({"horizon_weeks": h, "method": INT_LABEL[meth],
+                            "coverage_low_burden": round(agg.loc[0, "sum"] / agg.loc[0, "count"], 4),
+                            "coverage_high_burden": round(agg.loc[2, "sum"] / agg.loc[2, "count"], 4),
+                            "difference": round(dlt, 4), "ci_lo": round(lo_, 4),
+                            "ci_hi": round(hi_, 4), "z": round(z, 3), "p_raw": round(pv, 6)})
+    # is the SPREAD significantly smaller under the group-conditional method?
+    a = _spread_boot(INTERVALS[(h, "split")], BURDEN_G)
+    b = _spread_boot(INTERVALS[(h, "mondrian_adaptive")], BURDEN_G)
+    diff = a - b
+    sp_rows.append({"horizon_weeks": h,
+                    "spread_split": round(float(np.mean(a)), 4),
+                    "spread_group_conditional": round(float(np.mean(b)), 4),
+                    "reduction": round(float(np.mean(diff)), 4),
+                    "ci_lo": round(float(np.percentile(diff, 2.5)), 4),
+                    "ci_hi": round(float(np.percentile(diff, 97.5)), 4),
+                    "boot_p": round(float(2 * min((diff <= 0).mean(), (diff >= 0).mean())), 4)})
+
+CC = pd.DataFrame(cc_rows)
+if len(CC):
+    _rej, _adj = bh_fdr(CC["p_raw"].values, q=ALPHA)
+    CC["p_BH"] = np.round(_adj, 6)
+    CC["verdict"] = np.where(_rej, f"coverage differs by burden (BH q<{ALPHA})",
+                             "no detectable difference by burden")
+save_table("table5b_conditional_coverage_test", CC,
+           "Two-proportion test of low- vs high-burden coverage, per method")
+print(CC.to_string(index=False))
+SPR = save_table("table5c_spread_reduction", pd.DataFrame(sp_rows),
+                 "Bootstrap of the coverage-spread reduction from group-conditional "
+                 "calibration, resampling districts")
+print(SPR.to_string(index=False))
+
+# --- (b) burden, or a proxy for something else? -------------------------------
+# Per-district coverage regressed on burden and on the size covariates it might be
+# standing in for. If burden survives and population does not, "big districts are
+# harder" is dead as an explanation.
+I2 = INTERVALS[(2, "split")].copy()
+I2["_c"] = ((I2.y >= I2.lo) & (I2.y <= I2.hi)).astype(float)
+per_unit = I2.groupby("unit")["_c"].mean().rename("coverage").reset_index()
+cov_src = MD[MD.year <= ALARM_TRAIN_MAX].groupby("unit").agg(
+    burden=("cases", "mean"),
+    population=("population", "first") if "population" in MD.columns else ("cases", "size"),
+    pop_density=("pop_density", "first") if "pop_density" in MD.columns else ("cases", "size"),
+).reset_index()
+reg = per_unit.merge(cov_src, on="unit")
+reg["log_burden"] = np.log1p(reg["burden"])
+reg["log_population"] = np.log1p(reg["population"])
+rows = []
+for v in ["log_burden", "log_population", "pop_density"]:
+    if reg[v].nunique() < 3:
+        continue
+    r, pv = stats.spearmanr(reg[v], reg["coverage"])
+    rows.append({"covariate": v, "spearman_rho": round(float(r), 4),
+                 "p_value": round(float(pv), 6), "n_districts": len(reg)})
+BURD = pd.DataFrame(rows)
+if len(BURD):
+    _rej, _adj = bh_fdr(BURD["p_value"].values, q=ALPHA)
+    BURD["p_BH"] = np.round(_adj, 6)
+    BURD["verdict"] = np.where(_rej, "associated with coverage", "not associated")
+save_table("table5d_coverage_covariates", BURD,
+           "Per-district coverage under split conformal against burden and the size "
+           "covariates burden might be proxying for")
+print(BURD.to_string(index=False))
 
 
 # %%
@@ -1577,6 +1714,74 @@ if len(STAB):
 
 # %%
 # =============================================================================
+# CELL 12d — Properly powered comparison of the two target parameterisations
+# =============================================================================
+# The audit showed this comparison is unresolvable at three seeds: at h=2 the
+# anchored model's seed-to-seed sd was 5.95 skill points against a claimed
+# advantage of 2.53. Here each of N_PAIR_SEEDS seeds fits BOTH models on the same
+# folds, so seed is a blocking factor and the comparison is paired - far more
+# efficient than comparing two independent ensembles. A paired t-test and a
+# Wilcoxon signed-rank across seeds then answer the question directly.
+N_PAIR_SEEDS = int(os.environ.get("ICEEICT_PAIR_SEEDS", 20))
+PAIR_SEEDS = list(range(1000, 1000 + N_PAIR_SEEDS))
+log.info("paired seed comparison: %d seeds", N_PAIR_SEEDS)
+
+pair_rows = []
+for h in HORIZONS:
+    tl, tg = f"target_lead_{h}w", f"target_growth_{h}w"
+    per_seed = {"anchored": [], "level": []}
+    for sd in PAIR_SEEDS:
+        ya, yl, yy, pp = [], [], [], []
+        for ty in TEST_YEARS:
+            tr = MD[(MD.year < ty) & MD[tl].notna()]
+            te = MD[(MD.year == ty) & MD[tl].notna()]
+            anchor_v = te["cases_lag0"].values + 1.0
+            mg = lgb.LGBMRegressor(**{**LGB_REG, "random_state": sd},
+                                   **GROWTH_OBJECTIVES[GROWTH_OBJ_NAME]).fit(tr[FD_FULL], tr[tg])
+            ya.append(np.clip(anchor_v * np.exp(mg.predict(te[FD_FULL])) - 1, 0, None))
+            ml = lgb.LGBMRegressor(**{**LGB_REG, "random_state": sd},
+                                   objective="tweedie",
+                                   tweedie_variance_power=TWEEDIE_P).fit(tr[FD_FULL], tr[tl])
+            yl.append(np.clip(ml.predict(te[FD_FULL]), 0, None))
+            yy.append(te[tl].values); pp.append(te["cases_lag0"].values)
+        y = np.concatenate(yy); base = mean_absolute_error(y, np.concatenate(pp))
+        per_seed["anchored"].append(100 * (1 - mean_absolute_error(y, np.concatenate(ya)) / base))
+        per_seed["level"].append(100 * (1 - mean_absolute_error(y, np.concatenate(yl)) / base))
+    a = np.array(per_seed["anchored"]); l = np.array(per_seed["level"]); d = a - l
+    t_stat, p_t = stats.ttest_rel(a, l)
+    try:
+        _, p_w = stats.wilcoxon(a, l)
+    except Exception:
+        p_w = np.nan
+    dz = float(d.mean() / d.std(ddof=1)) if d.std(ddof=1) > 0 else np.nan   # Cohen dz
+    se = d.std(ddof=1) / np.sqrt(len(d))
+    pair_rows.append({
+        "horizon_weeks": h, "n_seeds": len(d),
+        "anchored_mean_skill": round(float(a.mean()), 2), "anchored_sd": round(float(a.std(ddof=1)), 2),
+        "level_mean_skill": round(float(l.mean()), 2), "level_sd": round(float(l.std(ddof=1)), 2),
+        "paired_diff": round(float(d.mean()), 3),
+        "ci_lo": round(float(d.mean() - 1.96 * se), 3), "ci_hi": round(float(d.mean() + 1.96 * se), 3),
+        "cohens_dz": round(dz, 3), "p_paired_t": round(float(p_t), 5),
+        "p_wilcoxon": round(float(p_w), 5) if np.isfinite(p_w) else np.nan})
+
+PAIR = pd.DataFrame(pair_rows)
+_rej, _adj = bh_fdr(PAIR["p_paired_t"].values, q=ALPHA)
+PAIR["p_BH"] = np.round(_adj, 5)
+PAIR["verdict"] = np.where(_rej, np.where(PAIR.paired_diff > 0,
+                                          "anchored better", "level better"),
+                           "no detectable difference")
+save_table("table13_paired_seed_comparison", PAIR,
+           f"Anchored growth vs Tweedie level across {N_PAIR_SEEDS} paired seeds; "
+           "seed is a blocking factor so the comparison is paired, not two ensembles")
+print(PAIR[["horizon_weeks", "anchored_mean_skill", "anchored_sd", "level_mean_skill",
+            "level_sd", "paired_diff", "ci_lo", "ci_hi", "cohens_dz", "p_BH", "verdict"]]
+      .to_string(index=False))
+log.info("paired comparison resolves %d of %d horizons at BH q<%.2f",
+         int(_rej.sum()), len(PAIR), ALPHA)
+
+
+# %%
+# =============================================================================
 # CELL 13 — 2026 forward test. Frozen at end-2025, never refitted.
 # =============================================================================
 fwd_rows = []
@@ -1603,11 +1808,12 @@ if (MD.year == 2026).any():
                                          objective="quantile", alpha=a).fit(tr[FD_FULL], tr[tg])
                        for sd in SEEDS]) for a in (0.05, 0.95)}
         cl, ch = q[0.05].predict(cal[FD_FULL]), q[0.95].predict(cal[FD_FULL])
-        cw_ = np.maximum(ch - cl, 1e-6)
+        _wf = max(float(np.quantile(ch - cl, 0.05)), 1e-3)
+        cw_ = np.maximum(ch - cl, _wf)
         s = np.maximum(cl - cal[tg].values, cal[tg].values - ch) / cw_
         n = len(s); qh = np.quantile(s, min(1.0, np.ceil((n + 1) * NOMINAL) / n))
         tl_, th_ = q[0.05].predict(te[FD_FULL]), q[0.95].predict(te[FD_FULL])
-        tw_ = np.maximum(th_ - tl_, 1e-6)
+        tw_ = np.maximum(th_ - tl_, _wf)
         lo = np.clip(anchor * np.exp(tl_ - qh * tw_) - 1, 0, None)
         hi = anchor * np.exp(th_ + qh * tw_) - 1
         y = te[tl].values
@@ -1826,6 +2032,9 @@ ASSUMPTIONS = pd.DataFrame([
      "and loses to persistence. Evidence that the published benchmark does not transfer "
      "to operational resolution - NOT evidence that our model beats ARIMA, since the "
      "order was not re-selected for this data"),
+    ("paired-comparison seeds", str(N_PAIR_SEEDS), "power analysis",
+     "three seeds could not resolve a 2.53-point difference against a 5.95-point "
+     "seed sd; the paired design blocks on seed and uses this many"),
     ("seed ensemble", str(SEEDS), "design",
      "single-seed estimates moved by up to 7.6 skill points between runs; every learned "
      "model is the mean over these seeds and table12 reports the member spread"),
