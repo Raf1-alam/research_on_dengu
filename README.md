@@ -37,15 +37,18 @@ The clinical arm has been removed. What follows is what the data supports.
 
 ## Results
 
-**Canonical run:** Kaggle, 9 Sep 2026, `ml_notebook3` at commit `eddf549`
+**Canonical run:** Kaggle, 9 Sep 2026 17:27 UTC, `ml_notebook3` at commit `06d65a6`
 (Python 3.12.13, pandas 2.3.3, numpy 2.0.2, LightGBM 4.6.0). Every number below and every file
 in `results/` comes from that single execution.
 
-**Reproducibility.** An independent Kaggle run of the immediately preceding commit produced
-**23 of 25 tables byte-identical**; the two that differ are the two that commit changed. A run
-on a different stack entirely (Python 3.13.5 / pandas 3.0.3 / numpy 2.5.0 / LightGBM 4.7.0)
-agrees on every verdict. `run_manifest.json` pins library versions, both seed sets and a
-SHA-256 of each input file.
+**Reproducibility.** Against the previous canonical run, **31 of 32 comparable tables are
+byte-identical**; the single difference is the negative-binomial row of `table2`, which is
+exactly the model respecified in between. On a different stack entirely (Python 3.13.5 /
+pandas 3.0.3 / numpy 2.5.0 / LightGBM 4.7.0) the headline anchored model agrees to **1.83
+skill points**, and divergence beyond that is confined to `level_L2` and `level_Poisson`,
+which are documented below as the least stable models in the study. Eleven of the twelve
+rows of `table5e` also reproduce their verdict across stacks; the exception is flagged there.
+`run_manifest.json` pins library versions, both seed sets and a SHA-256 of each input.
 
 64 districts x 254 ISO weeks, expanding rolling origin (train <=2023 -> test 2024;
 train <=2024 -> test 2025). Every learned model is a mean over three seeds; every tuned constant
@@ -117,12 +120,19 @@ This is a crossover, and the paper is not framed as "our reparameterisation wins
 
 **Forecast skill**, MAE reduction against lag-0 persistence, with baselines:
 
-| Horizon | Seasonal naive | ARIMA(2,1,2) | Level (L2) | Level (Tweedie) | Anchored growth |
-|---|---:|---:|---:|---:|---:|
-| 1 wk | -409.2% | -47.6% | -36.8% | +9.4% | **+13.4%** |
-| 2 wk | -278.8% | -41.6% | -20.3% | +17.5% | **+20.1%** |
-| 3 wk | -196.8% | -34.1% | -11.4% | **+20.8%** | +16.0% |
-| 4 wk | -149.3% | -30.0% | -11.0% | **+16.3%** | +16.1% |
+| Horizon | Seasonal naive | ARIMA(2,1,2) | NB-GLM | MLP | Ridge AR(4) | Level (L2) | Level (Tweedie) | Anchored growth |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 wk | -409.2% | -47.6% | -39.7% | -30.0% | -13.2% | -36.8% | +9.4% | **+13.4%** |
+| 2 wk | -278.8% | -41.6% | -29.5% | -7.2% | -15.0% | -20.3% | +17.5% | **+20.1%** |
+| 3 wk | -196.8% | -34.1% | -21.1% | -3.0% | -11.5% | -11.4% | **+20.8%** | +16.0% |
+| 4 wk | -149.3% | -30.0% | -11.1% | -8.2% | -7.4% | -11.0% | **+16.3%** | +16.1% |
+
+Four model families, and **every classical baseline loses to persistence at this resolution**.
+That is itself a finding: Faruk (2026) reports SARIMAX generalising best on *monthly national*
+data, so resolution is what changes the answer. The negative-binomial GLM is reported with
+log-population as a free covariate; using it as an offset - which constrains cases to be
+proportional to population, wrong once you condition on last week's count - scores -172% and
+would have been a strawman.
 
 The ARIMA order is Naher et al.'s, selected on national *monthly* data; applied here at
 district-week resolution with 47% zeros it is out of regime. Read that row as *the published
@@ -145,9 +155,50 @@ C1 > C3 > C2 > C4 ordering holds at every one. Sweeping the minimum-case floor o
 moves it 0.105 to 0.086 - largest with no floor at all, so it is not a floor artefact
 (`table6b`).
 
-**Operational.** At 80% sensitivity, h = 1: precision 0.42, false-alarm rate 0.14, median
-**7 weeks** of warning (IQR 3-15, n = 89 district-seasons) before a district crosses its own
-outbreak threshold.
+**Operational, and weaker than it first appeared.** An earlier version of this section quoted
+precision 0.42 and seven weeks of warning at 80% sensitivity. Both came from a threshold read
+off the *test* precision-recall curve and applied to the same rows, which is why achieved
+sensitivity was exactly 0.800. Thresholds are now fitted on the inner validation year and
+frozen, and sensitivity is an outcome rather than a target.
+
+Doing that honestly exposes a second problem: the alarm base rate is 0.372 in 2023 and 0.143
+in the test years, so a sensitivity-targeted threshold does not transfer - frozen at the 80%
+point it fires on 31 districts a week and reaches a false-alarm rate of 0.42. What does
+transfer is a capacity rule that uses no labels at all: rank districts each week, alert the
+top k%.
+
+| rule, h = 2 | sensitivity | precision | false-alarm rate | alerts/week |
+|---|---:|---:|---:|---:|
+| top 5% of districts | 0.121 | 0.295 | 0.037 | 3 |
+| top 10% | 0.198 | 0.241 | 0.080 | 6 |
+| top 20% | 0.346 | 0.194 | 0.185 | 13 |
+
+These are honest operating points and they are not good ones. A fixed weekly budget is also
+structurally mismatched to a synchronised seasonal epidemic: six alerts cannot cover the tens
+of districts simultaneously above threshold at peak, so capacity has to scale with the season.
+The defensible alarm claims in this study are the threshold-free ones - ROC and PR by division,
+and the optimism gap.
+
+**Lead time is withdrawn as a claim.** Measured as weeks from first alarm to outbreak onset, the
+median across five operating rules ranges from 17 to 33 weeks, driven only by how often each
+rule is permitted to fire. Any rule ever active in the quiet season produces an arbitrarily long
+"lead". `table7b` reports every rule rather than a chosen one; this design does not identify
+lead time and no figure from that table should be quoted as the warning the system provides.
+
+**Skill collapses on the extreme season.** With each season held out in turn, skill is 33.8%
+(2022), **-3.0% (2023)**, 29.1% (2024), 12.3% (2025) and 22.9% (2026 partial). 2023 carried
+321,593 cases against roughly 100,000 in its neighbours, and there the model is *worse* than
+persistence.
+
+`table20` separates the two candidate explanations by reporting absolute errors, since skill is
+a ratio that hides which is happening. The model's entire advantage lives in high-count weeks:
+on large weeks it beats persistence by 29% in 2024 and loses by 1% in 2023. Its bias there is
+small and positive, so the failure is variance-dominated - it reaches 2023's levels but cannot
+track the week-to-week dynamics at that scale.
+
+That single mechanism, unmodelled variance at high counts, also explains why high-burden
+intervals need to be 24-46% wider, why split conformal leaves a burden gradient, and why prior
+work reports interval coverage collapsing during outbreak periods.
 
 **Forward test.** Frozen at end-2025, applied to 2026 without refitting: +18.6%, +22.9% and
 +23.5% skill at h = 1, 2 and 4, with conformal coverage 0.873 / 0.848 / 0.855.
@@ -163,6 +214,22 @@ Tweedie level model manages +1.4% skill against anchoring's +14.9% at h = 1, whi
 districts the two are close. The difference-in-differences is **+12.6 pp (bootstrap p < 0.001)
 at h = 1 only**; at h = 2, 3 and 4 it is directionally consistent but not significant. State it
 as a one-week result.
+
+**Robustness checks that passed.** The burden gradient is not an artefact of the anchored
+log-ratio: rebuilt in level space it is still present at every horizon (`table5e`). The optimism
+gap is not an artefact of the outbreak definition: under a per-district quantile, a WHO-style
+endemic channel and a growth rule using no level threshold at all, it ranges 0.094 to 0.159 ROC
+(`table17`). And it does not depend on same-week data: delaying every satellite, search-trend
+and same-week surveillance covariate by six weeks - beyond the five-week reporting lag measured
+below - moves h=1 skill from 14.5% to 14.2% and leaves coverage unchanged (`table16`).
+
+**An independent check on the surveillance series.** One district's epidemic curve rebuilt from
+35,581 individual symptom-onset records correlates with the DGHS aggregate at r = 0.65, peaking
+at a **five-week lag**, and records 2.3-5.7x more cases (`table18`). Cox's Bazar hosts the
+Rohingya settlements, so this is most likely a catchment difference rather than simple
+under-reporting - but either way the district series is an incomplete measurement, and the
+national aggregate's agreement with an independent bulletin (r = 0.9994) does not extend to
+individual district attribution.
 
 **What is not established.** No individual climate variable's contribution is identifiable:
 only 1 of 10 leave-one-out deltas exceeds seed noise, so the redundancy question cannot be
