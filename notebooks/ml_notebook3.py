@@ -66,6 +66,10 @@ CAL_WEEKS       = 26                # DEFAULT ONLY - selected empirically in Cel
 ALARM_QUANTILE  = 0.80              # per-unit outbreak threshold
 ALARM_MIN_CASES = 5
 ALARM_TRAIN_MAX = 2023              # threshold derived from <= this year only
+ALARM_BASE_MIN  = 2022              # ...and from >= this year. The 2019 rows cover only
+                                    # ~30% of that season, so including them shifted the
+                                    # per-district quantile away from the modelling window
+                                    # and set the alarm base rate off a season no model sees.
 NOMINAL         = 0.90
 ACI_GAMMA       = 0.02              # DEFAULT ONLY - selected empirically in Cell 4b
 
@@ -441,15 +445,29 @@ def engineer(panel):
     df["sin_epi_week"] = np.sin(2 * np.pi * df["epi_week"] / 52.1775)
     df["cos_epi_week"] = np.cos(2 * np.pi * df["epi_week"] / 52.1775)
 
-    # Alarm label — threshold from TRAINING years only, so the test period never
-    # participates in defining its own labels.
-    q = (df[df.year <= ALARM_TRAIN_MAX].groupby("unit")["cases"].quantile(ALARM_QUANTILE))
-    thr = np.maximum(df["unit"].map(q).fillna(ALARM_MIN_CASES), ALARM_MIN_CASES)
-    df["alarm_threshold"] = thr
-    for h in HORIZONS:
-        lead = df[f"target_lead_{h}w"]
-        df[f"target_alarm_{h}w"] = (lead >= thr).astype(float).where(lead.notna())
     return df
+
+
+def add_alarm_labels(M, quantile=None):
+    """Attach the outbreak threshold and alarm labels to a MODELLING frame.
+
+    Deliberately not done inside engineer(). The threshold has to be computed over
+    exactly the rows that are modelled: engineer() still holds the 2019 partial
+    season and the early-2022 weeks that later drop out for want of an 8-week lag,
+    and both pull the per-district quantile away from the modelling window. Doing it
+    here also means the Cell 9b sweep and the reported matrix share one definition,
+    which a gate then verifies.
+    """
+    M = M.copy()
+    q = quantile if quantile is not None else ALARM_QUANTILE
+    base = M[(M.year >= ALARM_BASE_MIN) & (M.year <= ALARM_TRAIN_MAX)]
+    thr_map = base.groupby("unit")["cases"].quantile(q)
+    thr = np.maximum(M["unit"].map(thr_map).fillna(ALARM_MIN_CASES), ALARM_MIN_CASES)
+    M["alarm_threshold"] = thr
+    for h in HORIZONS:
+        lead = M[f"target_lead_{h}w"]
+        M[f"target_alarm_{h}w"] = (lead >= thr).astype(float).where(lead.notna())
+    return M
 
 
 # ---- Feature groups. An ALLOW-LIST: nothing enters the model unless named here.
@@ -503,7 +521,8 @@ def burden_groups(M, n_groups=3):
     high-burden ones, so one shared correction is the wrong object: the score
     distribution genuinely differs by burden.
     """
-    b = M[M.year <= ALARM_TRAIN_MAX].groupby("unit")["cases"].mean()
+    b = (M[(M.year >= ALARM_BASE_MIN) & (M.year <= ALARM_TRAIN_MAX)]
+         .groupby("unit")["cases"].mean())
     if b.nunique() < n_groups:
         return {u: 0 for u in M.unit.unique()}
     lab = pd.qcut(b, n_groups, labels=False, duplicates="drop")
@@ -515,7 +534,8 @@ def prepare(panel, groups, min_year=2022):
     F = select_features(df, groups)
     M = df[(df.year >= min_year) & df[f"target_growth_1w"].notna() & df["cases_lag8"].notna()].copy()
     M[F] = M[F].fillna(0.0)
-    return M.reset_index(drop=True), F
+    M = add_alarm_labels(M.reset_index(drop=True))
+    return M, F
 
 
 MD, FD_FULL = prepare(PANEL_D, FULL_GROUPS)          # district, all covariates
@@ -1399,6 +1419,82 @@ log.info("[gate] validation matrix ordering OK")
 
 # %%
 # =============================================================================
+# CELL 9b — Does the optimism gap survive a different outbreak threshold?
+# =============================================================================
+# The whole alarm arm, the optimism gap included, rests on one unjustified
+# constant: the per-district 80th percentile of training-year cases. If the gap
+# only exists at that threshold it is an artefact of the definition rather than a
+# property of the validation design. The sweep below re-runs the full 2x2 matrix
+# at four thresholds, holding everything else fixed.
+
+ALARM_Q_SWEEP = [0.70, 0.75, 0.80, 0.85]
+gap_rows = []
+
+for _q in ALARM_Q_SWEEP:
+    _Mq = add_alarm_labels(MD, quantile=_q)          # one definition, shared with the matrix
+    _lab = _Mq[f"target_alarm_{H_ALARM}w"]
+    Aq = _Mq.loc[_lab.notna()].copy()
+    Aq["_y"] = _lab.loc[_lab.notna()].astype(int).values
+    if Aq["_y"].nunique() < 2:
+        continue
+
+    def _fq(tr, te):
+        pr = np.mean([lgb.LGBMClassifier(**{**LGB_CLF, "random_state": sd})
+                      .fit(tr[FD_FULL], tr["_y"]).predict_proba(te[FD_FULL])[:, 1]
+                      for sd in SEEDS], axis=0)
+        return pr, te["_y"].values
+
+    def _pl(pairs):
+        ps, ys = zip(*pairs)
+        pp, yy = np.concatenate(ps), np.concatenate(ys)
+        return float(roc_auc_score(yy, pp)), float(average_precision_score(yy, pp))
+
+    _blocks = sorted(Aq["block"].unique())
+    _tr1, _te1 = train_test_split(Aq, test_size=0.20, random_state=SEED, stratify=Aq["_y"])
+    q1 = _pl([_fq(_tr1, _te1)])
+    q2 = _pl([_fq(Aq[Aq.year < ty], Aq[Aq.year == ty]) for ty in TEST_YEARS])
+    q3 = _pl([_fq(Aq[Aq.block != b], Aq[Aq.block == b]) for b in _blocks])
+    q4 = _pl([_fq(Aq[(Aq.year < ty) & (Aq.block != b)], Aq[(Aq.year == ty) & (Aq.block == b)])
+              for ty in TEST_YEARS for b in _blocks
+              if Aq[(Aq.year == ty) & (Aq.block == b)]["_y"].nunique() > 1])
+
+    gap_rows.append({
+        "alarm_quantile": _q, "base_rate": round(float(Aq["_y"].mean()), 4),
+        "n_rows": len(Aq),
+        "C1_ROC": round(q1[0], 4), "C2_ROC": round(q2[0], 4),
+        "C3_ROC": round(q3[0], 4), "C4_ROC": round(q4[0], 4),
+        "gap_ROC": round(q1[0] - q4[0], 4),
+        "C1_PR": round(q1[1], 4), "C4_PR": round(q4[1], 4),
+        "gap_PR": round(q1[1] - q4[1], 4),
+        "ordering_holds": bool(q1[0] > q3[0] > q2[0] > q4[0])})
+
+# A sensitivity sweep that cannot reproduce the value it is perturbing is measuring
+# something else. This caught exactly that: the sweep used the modelling window while
+# engineer() used a window including the 2019 partial season.
+_base_row = [r for r in gap_rows if abs(r["alarm_quantile"] - ALARM_QUANTILE) < 1e-9]
+if _base_row:
+    _d = abs(_base_row[0]["gap_ROC"] - (c1[0] - c4[0]))
+    assert _d < 0.01, (
+        f"sensitivity sweep does not reproduce the reported gap at q={ALARM_QUANTILE} "
+        f"(sweep {_base_row[0]['gap_ROC']:.4f} vs matrix {c1[0] - c4[0]:.4f}) - it is "
+        "perturbing a different baseline and cannot be interpreted")
+    log.info("[gate] sweep reproduces the reported gap at q=%.2f (delta %.4f)",
+             ALARM_QUANTILE, _d)
+
+GAPS = save_table("table6b_alarm_threshold_sensitivity", pd.DataFrame(gap_rows),
+                  "Optimism gap re-measured at four outbreak thresholds; the reported "
+                  "matrix uses 0.80, and this shows whether the gap depends on that choice")
+print(GAPS.to_string(index=False))
+if len(GAPS):
+    log.info("optimism gap across thresholds %s: ROC %.4f-%.4f, PR %.4f-%.4f; "
+             "C1>C3>C2>C4 ordering holds in %d of %d",
+             ALARM_Q_SWEEP, GAPS.gap_ROC.min(), GAPS.gap_ROC.max(),
+             GAPS.gap_PR.min(), GAPS.gap_PR.max(),
+             int(GAPS.ordering_holds.sum()), len(GAPS))
+
+
+# %%
+# =============================================================================
 # CELL 10 — Operational alarms: fixed sensitivity, false-alarm rate, lead time
 # =============================================================================
 alarm_rows, lead_rows, div_rows = [], [], []
@@ -2041,9 +2137,10 @@ ASSUMPTIONS = pd.DataFrame([
     ("nominal coverage", f"{NOMINAL}", "reporting convention", "90% is standard for epidemic forecast hubs"),
     ("significance level", f"{ALPHA}", "convention",
      "0.05 two-sided; every family of tests is Benjamini-Hochberg corrected"),
-    ("alarm quantile", f"{ALARM_QUANTILE}", "assumption",
+    ("alarm quantile", f"{ALARM_QUANTILE}", "assumption, SENSITIVITY TESTED",
      f"per-unit 80th percentile of training-year cases; base rate {A[YA].mean():.3f}. "
-     "Sensitivity across 0.70/0.75/0.80/0.85 is not run - state as a limitation"),
+     "Cell 9b re-measures the optimism gap at 0.70/0.75/0.80/0.85 - see "
+     "table6b_alarm_threshold_sensitivity.csv"),
     ("alarm minimum cases", f"{ALARM_MIN_CASES}", "assumption",
      "floor so that near-zero districts cannot alarm on a single case"),
     ("case lags", "[1,2,3,4,8] weeks", "assumption",
