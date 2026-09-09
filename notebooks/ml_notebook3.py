@@ -54,6 +54,7 @@ log = logging.getLogger("iceeict")
 
 import lightgbm as lgb
 from sklearn.linear_model import Ridge
+from sklearn.neural_network import MLPRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (mean_absolute_error, roc_auc_score,
                              average_precision_score, precision_recall_curve)
@@ -811,6 +812,7 @@ class _EnsQ:
 
 
 from statsmodels.tsa.arima.model import ARIMA
+import statsmodels.api as sm
 warnings.filterwarnings("ignore", module="statsmodels")
 
 ARIMA_ORDER = (2, 1, 2)   # Naher et al. (2022) selected ARIMA(2,1,2) for Bangladeshi
@@ -885,7 +887,7 @@ GROWTH_OBJECTIVES = {
     "L1": dict(objective="regression_l1"),   # median of the log-ratio
 }
 
-def rolling_origin(M, F, h, test_years=TEST_YEARS, arima_tag=None):
+def rolling_origin(M, F, h, test_years=TEST_YEARS, arima_tag=None, with_extras=False):
     """Expanding-window rolling origin. Returns one long frame of aligned predictions."""
     tl, tg = f"target_lead_{h}w", f"target_growth_{h}w"
     frames = []
@@ -929,6 +931,66 @@ def rolling_origin(M, F, h, test_years=TEST_YEARS, arima_tag=None):
         out = out.merge(prev, on=["unit", "epi_week"], how="left")
         out["snaive"] = out["snaive"].fillna(out["persistence"])
 
+        # Neural comparator. Only built when this frame feeds the model shootout: the
+        # ablation, resolution and latency cells read `anchored` alone, so fitting an
+        # MLP inside each of them costs minutes per call and changes no reported number.
+        # The tree models, the GLM and the linear model are all
+        # different, but none of them is the architecture this literature actually
+        # reaches for. A small MLP on the same features answers "you only tried
+        # gradient boosting" without pretending a 6,000-row panel supports a deep
+        # sequence model. Early stopping on an internal split, standardised inputs,
+        # averaged over SEEDS like everything else.
+        if with_extras:
+          try:
+            _med_n = tr[F].median(numeric_only=True)
+            Xtr_n = tr[F].fillna(_med_n).fillna(0.0).to_numpy(float)
+            Xte_n = te[F].fillna(_med_n).fillna(0.0).to_numpy(float)
+            _mu, _sd = Xtr_n.mean(0), Xtr_n.std(0)
+            _sd[_sd == 0] = 1.0
+            Xtr_n = (Xtr_n - _mu) / _sd; Xte_n = (Xte_n - _mu) / _sd
+            _ytr = np.log1p(tr[tl].to_numpy(float))
+            _ps = []
+            for sd in SEEDS:
+                _mlp = MLPRegressor(hidden_layer_sizes=(64, 32), activation="relu",
+                                    alpha=1e-3, learning_rate_init=1e-3, max_iter=300,
+                                    early_stopping=True, n_iter_no_change=15,
+                                    validation_fraction=0.15, random_state=sd)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    _mlp.fit(Xtr_n, _ytr)
+                _ps.append(np.expm1(_mlp.predict(Xte_n)))
+            out["mlp"] = np.clip(np.mean(_ps, axis=0), 0, None)
+          except Exception as e:
+            log.warning("MLP failed at h=%d, %s: %s", h, ty, e)
+            out["mlp"] = out["persistence"]
+
+        # Negative-binomial GLM. The audit's "only one model family" objection could
+        # not be answered by ARIMA, whose order is from national monthly data and is
+        # out of regime here. This is the standard count model for overdispersed
+        # surveillance counts, given the same features as the trees, ridge-penalised
+        # because IRLS on 77 correlated predictors does not otherwise converge.
+        if with_extras:
+          try:
+            # The trees take NaN natively; IRLS does not. 1.3% of feature cells are
+            # missing (season-block starts and the deposit's own lag columns), so the
+            # GLM gets train-median imputation. Without it every fold would throw and
+            # fall back to persistence, and the "baseline" would silently be a copy of
+            # persistence rather than a competing count model.
+            _med = tr[F].median(numeric_only=True)
+            Xtr = tr[F].fillna(_med).fillna(0.0).to_numpy(float)
+            Xte = te[F].fillna(_med).fillna(0.0).to_numpy(float)
+            mu, sd_ = Xtr.mean(0), Xtr.std(0)
+            sd_[sd_ == 0] = 1.0
+            Xtr = np.c_[np.ones(len(Xtr)), (Xtr - mu) / sd_]
+            Xte = np.c_[np.ones(len(Xte)), (Xte - mu) / sd_]
+            _nb = sm.GLM(tr[tl].to_numpy(float), Xtr,
+                         family=sm.families.NegativeBinomial(alpha=1.0))
+            _fit = _nb.fit_regularized(alpha=1e-3, L1_wt=0.0)
+            out["nb_glm"] = np.clip(_fit.predict(Xte), 0, None)
+          except Exception as e:                    # never let a baseline kill the run
+            log.warning("negative-binomial GLM failed at h=%d, %s: %s", h, ty, e)
+            out["nb_glm"] = out["persistence"]
+
         # Log-AR(4) ridge, a linear floor.
         ar = [c for c in ["log_cases_lag0", "log_cases_lag1", "log_cases_lag2", "log_cases_lag3"] if c in F]
         if ar:
@@ -939,6 +1001,15 @@ def rolling_origin(M, F, h, test_years=TEST_YEARS, arima_tag=None):
 
         frames.append(out)
     P = pd.concat(frames, ignore_index=True)
+    if "nb_glm" in P.columns:
+        _same = float(np.mean(np.isclose(P["nb_glm"].values, P["persistence"].values)))
+        if _same > 0.99:
+            log.warning("[gate] nb_glm is a copy of persistence in %.0f%% of rows at h=%d - "
+                        "the GLM did not fit and must not be reported as a baseline",
+                        100 * _same, h)
+        else:
+            log.info("  nb_glm fitted (differs from persistence in %.0f%% of rows)",
+                     100 * (1 - _same))
     # ARIMA is independent of the feature set, so it is computed once per panel and
     # merged in; the ablation and resolution loops reuse the cache.
     if arima_tag:
@@ -951,17 +1022,20 @@ def rolling_origin(M, F, h, test_years=TEST_YEARS, arima_tag=None):
     return P
 
 
-PRED = {h: rolling_origin(MD, FD_FULL, h, arima_tag="district") for h in HORIZONS}
+PRED = {h: rolling_origin(MD, FD_FULL, h, arima_tag="district", with_extras=True)
+        for h in HORIZONS}
 log.info("rolling-origin predictions built for h = %s", HORIZONS)
 
 SEED_COLS = lambda df: [c for c in df.columns if c.startswith("__seed")]
 
-MODELS = ["persistence", "snaive", "arima", "ridge_ar4",
+MODELS = ["persistence", "snaive", "arima", "ridge_ar4", "nb_glm", "mlp",
           "level_L2", "level_Poisson", "level_Tweedie",
           "anchored_L2", "anchored_L1"]
 LABELS = {"persistence": "Lag-0 persistence", "snaive": "Seasonal naive",
           "arima": f"ARIMA{ARIMA_ORDER} per district (order from Naher 2022, national monthly)",
           "ridge_ar4": "Log-AR(4) ridge",
+          "nb_glm": "Negative-binomial GLM (ridge-penalised)",
+          "mlp": "MLP (64-32, early stopping)",
           "level_L2": "LightGBM level (L2)",
           "level_Poisson": "LightGBM level (Poisson)",
           "level_Tweedie": "LightGBM level (Tweedie)",
@@ -981,9 +1055,12 @@ for h in HORIZONS:
                      "wMAPE_pct": round(mm["wMAPE"], 2),
                      "skill_vs_persistence_pct": round(100 * (1 - mm["MAE"] / base), 2)})
 shootout = save_table("table2_forecast_shootout", pd.DataFrame(rows),
-                      "Multi-horizon prospective forecast comparison, district resolution. "
-                      "The ARIMA row uses a published order fitted at a different "
-                      "resolution - see table0 before quoting it")
+                      f"Multi-horizon prospective forecast comparison, district "
+                      f"resolution, FULL feature set ({len(FD_FULL)} features). Skill "
+                      "numbers are only comparable across tables that use the same "
+                      "feature set: table9 uses the shared set and is lower for that "
+                      "reason alone. The ARIMA row uses a published order fitted at a "
+                      "different resolution - see table0 before quoting it")
 print(shootout.pivot_table(index="horizon_weeks", columns="model",
                            values="skill_vs_persistence_pct").round(1).to_string())
 
@@ -1142,7 +1219,7 @@ def _conformal_q(scores, level=NOMINAL):
     return float(np.quantile(scores, min(1.0, np.ceil((n + 1) * level) / n)))
 
 
-def interval_run(M, F, h, method, test_years=TEST_YEARS, gamma=None, groups=None):
+def interval_run(M, F, h, method, test_years=TEST_YEARS, gamma=None, groups=None, space="growth"):
     """method in {'empirical','raw','split','mondrian','adaptive'}.
 
     'mondrian' calibrates a separate correction within each burden group, which is
@@ -1168,11 +1245,20 @@ def interval_run(M, F, h, method, test_years=TEST_YEARS, gamma=None, groups=None
             gm = te["unit"].map(qm).fillna(tr[tg].median()).values
             lo, hi, med = anchor * np.exp(gl) - 1, anchor * np.exp(gh) - 1, anchor * np.exp(gm) - 1
         else:
-            tr, cal = _cal_split(M, tg, ty, CAL_WEEKS_BY_H.get(h, CAL_WEEKS))
+            # `space` decides what the quantile models are fitted to. "growth" is the
+            # anchored log-ratio the paper reports; "level" fits the counts directly.
+            # The distinction matters for one specific objection: the anchored
+            # back-transform (y_t+1)*exp(.)-1 is multiplicative in the anchor, so
+            # interval WIDTH scales with district burden by construction. If the
+            # conditional-coverage gradient is a property of conformal prediction on
+            # epidemic counts it must also appear in level space; if it is an artifact
+            # of the transform it will not. Cell 8c runs both and reports the answer.
+            _tcol = tg if space == "growth" else tl
+            tr, cal = _cal_split(M, _tcol, ty, CAL_WEEKS_BY_H.get(h, CAL_WEEKS))
             # Quantile loss is pinball; alpha=0.50 is the L1 median. Averaged over
             # SEEDS for the same reason the point forecasts are.
             _fitted = {a: [lgb.LGBMRegressor(**{**LGB_REG, "random_state": sd},
-                                             objective="quantile", alpha=a).fit(tr[F], tr[tg])
+                                             objective="quantile", alpha=a).fit(tr[F], tr[_tcol])
                            for sd in SEEDS] for a in (0.05, 0.50, 0.95)}
             q = {a: (lambda ms: (lambda X: np.mean([m.predict(X) for m in ms], axis=0)))(_fitted[a])
                  for a in (0.05, 0.50, 0.95)}
@@ -1188,7 +1274,7 @@ def interval_run(M, F, h, method, test_years=TEST_YEARS, gamma=None, groups=None
             # though the 90th-percentile quantile survives it.
             w_floor = max(float(np.quantile(c_hi - c_lo, 0.05)), 1e-3)
             c_w = np.maximum(c_hi - c_lo, w_floor)
-            s = np.maximum(c_lo - cal[tg].values, cal[tg].values - c_hi) / c_w
+            s = np.maximum(c_lo - cal[_tcol].values, cal[_tcol].values - c_hi) / c_w
             g_lo, g_hi, g_md = (q[0.05](te[F]), q[0.95](te[F]), q[0.50](te[F]))
             t_w = np.maximum(g_hi - g_lo, w_floor)
 
@@ -1226,12 +1312,19 @@ def interval_run(M, F, h, method, test_years=TEST_YEARS, gamma=None, groups=None
                         lvl = float(np.clip(1 - alpha_by_g[gid], 0.01, 0.999))
                         _o = np.quantile(score_by_g[gid], lvl) * t_w[sel]
                         qh_vec[sel] = _o
-                        cov_wk = ((y[sel] >= anchor[sel] * np.exp(g_lo[sel] - _o) - 1) &
-                                  (y[sel] <= anchor[sel] * np.exp(g_hi[sel] + _o) - 1)).mean()
+                        if space == "growth":
+                            _l = anchor[sel] * np.exp(g_lo[sel] - _o) - 1
+                            _h = anchor[sel] * np.exp(g_hi[sel] + _o) - 1
+                        else:
+                            _l, _h = g_lo[sel] - _o, g_hi[sel] + _o
+                        cov_wk = ((y[sel] >= _l) & (y[sel] <= _h)).mean()
                         alpha_by_g[gid] += gamma * ((1 - NOMINAL) - (1 - cov_wk))
-            lo = anchor * np.exp(g_lo - qh_vec) - 1
-            hi = anchor * np.exp(g_hi + qh_vec) - 1
-            med = anchor * np.exp(g_md) - 1
+            if space == "growth":
+                lo = anchor * np.exp(g_lo - qh_vec) - 1
+                hi = anchor * np.exp(g_hi + qh_vec) - 1
+                med = anchor * np.exp(g_md) - 1
+            else:
+                lo, hi, med = g_lo - qh_vec, g_hi + qh_vec, g_md
 
         f = te[["unit", "block", "year", "epi_week", "week_start"]].copy()
         f["y"] = y; f["lo"] = np.clip(lo, 0, None); f["hi"] = hi
@@ -1475,6 +1568,59 @@ print(BURD.to_string(index=False))
 
 # %%
 # =============================================================================
+# CELL 8c — Is the burden gradient conformal prediction, or our reparameterisation?
+# =============================================================================
+# The audit's strongest alternative explanation for the paper's lead result: every
+# interval in Cell 7 is built on the anchored log-ratio, whose back-transform is
+# multiplicative in the anchor, so absolute width scales with burden by construction.
+# A coverage gradient across burden tertiles is therefore consistent with BOTH "a
+# property of conformal prediction on epidemic counts" AND "an artifact of this
+# transform". Rebuilding the same intervals in level space separates them.
+lvl_rows = []
+for h in [1, 2, 4]:
+    for meth in ["split", "mondrian_adaptive"]:
+        for space in ["growth", "level"]:
+            I = (INTERVALS[(h, meth)] if space == "growth"
+                 else interval_run(MD, FD_FULL, h, meth, groups=BURDEN_G, space="level"))
+            I = I.copy()
+            I["_g"] = I["unit"].map(BURDEN_G)
+            cov = I.assign(_c=((I.y >= I.lo) & (I.y <= I.hi)).astype(int)).groupby("_g")["_c"]
+            agg = cov.agg(["sum", "count"])
+            if not {0, 2} <= set(agg.index):
+                continue
+            dlt, z, pv, lo_, hi_ = _two_prop(agg.loc[0, "sum"], agg.loc[0, "count"],
+                                             agg.loc[2, "sum"], agg.loc[2, "count"])
+            lvl_rows.append({
+                "horizon_weeks": h, "method": INT_LABEL[meth], "target_space": space,
+                "coverage_overall": round(float(((I.y >= I.lo) & (I.y <= I.hi)).mean()), 4),
+                "coverage_low_burden": round(agg.loc[0, "sum"] / agg.loc[0, "count"], 4),
+                "coverage_high_burden": round(agg.loc[2, "sum"] / agg.loc[2, "count"], 4),
+                "burden_gap": round(dlt, 4), "ci_lo": round(lo_, 4), "ci_hi": round(hi_, 4),
+                "z": round(z, 3), "p_raw": round(pv, 6),
+                "median_width_cases": round(float(np.median(I.hi - I.lo)), 2)})
+
+LVL = pd.DataFrame(lvl_rows)
+if len(LVL):
+    _rej, _adj = bh_fdr(LVL["p_raw"].values, q=ALPHA)
+    LVL["p_BH"] = np.round(_adj, 6)
+    LVL["verdict"] = np.where(_rej, "gradient present", "no detectable gradient")
+save_table("table5e_gradient_parameterisation", LVL,
+           "The burden gradient rebuilt in level space. If it appears under BOTH target "
+           "parameterisations the finding generalises; if it appears only under the "
+           "anchored log-ratio it must be scoped to that choice and cannot be described "
+           "as a property of conformal prediction on epidemic counts")
+print(LVL.to_string(index=False))
+if len(LVL):
+    _sp = LVL[(LVL.target_space == "level") & (LVL.method == INT_LABEL["split"])]
+    if len(_sp):
+        log.info("[audit] split-conformal burden gap in LEVEL space: %s (growth space: %s)",
+                 list(_sp.burden_gap.round(4)),
+                 list(LVL[(LVL.target_space == "growth") &
+                          (LVL.method == INT_LABEL["split"])].burden_gap.round(4)))
+
+
+# %%
+# =============================================================================
 # CELL 9 — 2x2 space-time validation matrix, spatial folds rotated over all blocks
 # =============================================================================
 H_ALARM = 2
@@ -1657,46 +1803,107 @@ for h in HORIZONS:
                        .fit(tr[FD_FULL], tr[ycol].astype(int))
                        .predict_proba(te[FD_FULL])[:, 1] for sd in SEEDS], axis=0)
     y, p = te[ycol].astype(int).values, te["p"].values
-    prec, rec, thr = precision_recall_curve(y, p)
+
+    # The operating threshold must be chosen WITHOUT the test labels. Reading it off
+    # the test precision-recall curve and then scoring the same rows at it guarantees
+    # the target sensitivity is hit exactly - the earlier version reported 0.800 and
+    # 0.901 for that reason, and every precision and false-alarm figure with it was
+    # optimistic. Here the threshold is fitted on the inner validation year (model
+    # trained on <= SEL_TRAIN, threshold picked on SEL_VALID), then frozen and applied
+    # unchanged to the test years. Achieved sensitivity is now an OUTCOME, not a target.
+    tr_in = sub[sub.year <= SEL_TRAIN]
+    va_in = sub[sub.year == SEL_VALID]
+    thr_by_target = {}
+    if len(va_in) and va_in[ycol].nunique() > 1:
+        p_va = np.mean([lgb.LGBMClassifier(**{**LGB_CLF, "random_state": sd})
+                        .fit(tr_in[FD_FULL], tr_in[ycol].astype(int))
+                        .predict_proba(va_in[FD_FULL])[:, 1] for sd in SEEDS], axis=0)
+        y_va = va_in[ycol].astype(int).values
+        pv, rv, tv = precision_recall_curve(y_va, p_va)
+        for target in (0.80, 0.90):
+            ok_v = np.where(rv[:-1] >= target)[0]
+            if len(ok_v):
+                thr_by_target[target] = float(tv[ok_v[-1]])
+
+    # A sensitivity target fitted on one season does not transfer to another when the
+    # base rate moves: 2023 ran a 0.372 alarm rate against 0.143 in the test years, so a
+    # threshold permissive enough for 80% sensitivity there fires almost every week here.
+    # That is a real finding about deployment and it is reported below, but it is not a
+    # usable operating point. The alert-budget rule is: each week, rank the districts by
+    # predicted score and alert the top k%. It uses no labels, needs no threshold to
+    # transfer, and matches how a surveillance unit with fixed field capacity actually
+    # works. Sensitivity and precision are then outcomes of a capacity decision.
+    _wk_rank = te.groupby("week_start")["p"].rank(ascending=False, method="first")
+    _wk_n = te.groupby("week_start")["p"].transform("size")
+    for k_pct in (0.05, 0.10, 0.20):
+        _cap = np.maximum(1, np.round(k_pct * _wk_n))
+        predb = (_wk_rank <= _cap).astype(int).values
+        tp = int(((predb == 1) & (y == 1)).sum()); fn = int(((predb == 0) & (y == 1)).sum())
+        fp = int(((predb == 1) & (y == 0)).sum()); tn = int(((predb == 0) & (y == 0)).sum())
+        alarm_rows.append({
+            "horizon_weeks": h, "rule": f"alert budget, top {int(k_pct * 100)}% of districts",
+            "target_sensitivity": np.nan,
+            "achieved_sensitivity": round(tp / (tp + fn), 3) if tp + fn else np.nan,
+            "precision": round(tp / (tp + fp), 3) if tp + fp else np.nan,
+            "false_alarm_rate": round(fp / (fp + tn), 4) if fp + tn else np.nan,
+            "alerts_per_week": round(float(_cap.mean()), 1),
+            "threshold": np.nan, "threshold_source": "no labels used"})
+        if h == H_ALARM:
+            te[f"_alert_budget{int(k_pct * 100)}"] = predb
 
     for target in (0.80, 0.90):
-        ok = np.where(rec[:-1] >= target)[0]
-        if not len(ok):
+        if target not in thr_by_target:
             continue
-        i = ok[-1]
-        t = thr[i]
+        t = thr_by_target[target]
         pred = (p >= t).astype(int)
+        tp = int(((pred == 1) & (y == 1)).sum()); fn = int(((pred == 0) & (y == 1)).sum())
         fp = int(((pred == 1) & (y == 0)).sum()); tn = int(((pred == 0) & (y == 0)).sum())
-        alarm_rows.append({"horizon_weeks": h, "target_sensitivity": target,
-                           "achieved_sensitivity": round(float(rec[i]), 3),
-                           "precision": round(float(prec[i]), 3),
+        alarm_rows.append({"horizon_weeks": h,
+                           "rule": f"sensitivity target fitted on {SEL_VALID}",
+                           "target_sensitivity": target,
+                           "achieved_sensitivity": round(tp / (tp + fn), 3) if tp + fn else np.nan,
+                           "precision": round(tp / (tp + fp), 3) if tp + fp else np.nan,
                            "false_alarm_rate": round(fp / (fp + tn), 4) if fp + tn else np.nan,
-                           "threshold": round(float(t), 4)})
-        if h == 2 and target == 0.80:
-            # Lead time: weeks between the first alarm and that unit-season's peak.
+                           "alerts_per_week": round(float(pred.sum()) / te["week_start"].nunique(), 1),
+                           "threshold": round(float(t), 4),
+                           "threshold_source": f"fitted on {SEL_VALID}, frozen"})
+        if h == H_ALARM:
+            te[f"_alert_sens{int(target * 100)}"] = pred
+    # Lead time is NOT reported as a point estimate. Measured as "weeks from the first
+    # alarm to the season's first threshold crossing", it is an artifact of whichever
+    # operating rule is chosen: a threshold tuned on the test set gave 7 weeks, one
+    # frozen on 2023 gave 16 (it fires continuously), and a weekly top-10% budget gave
+    # 30 (it always alerts somebody, including in January). Any rule that is ever active
+    # during the quiet season produces an arbitrarily long "lead". Rather than search for
+    # the definition that yields the most attractive number, every rule is reported and
+    # the spread is the finding: this design does not identify lead time.
+    if h == H_ALARM:
+        for _rule_col in [c for c in te.columns if c.startswith("_alert_")]:
+            _leads = []
             for (u, yr), g in te.groupby(["unit", "year"]):
                 g = g.sort_values("week_start")
-                # The event the system exists to anticipate: the season's first week
-                # in which this district actually crosses its own outbreak threshold.
                 crossed = g[g["cases_lag0"] >= g["alarm_threshold"]]
                 if not len(crossed):
                     continue
                 onset = crossed["week_start"].min()
-                peak  = g.loc[g["cases_lag0"].idxmax(), "week_start"]
-                # Genuine advance warning: the alarm must fire while the district is
-                # still quiet, i.e. strictly before that first crossing. Without this
-                # the metric only records when an already-endemic season began.
-                fired = g[(g.p >= t) & (g.week_start < onset) &
+                fired = g[(g[_rule_col] == 1) & (g.week_start < onset) &
                           (g["cases_lag0"] < g["alarm_threshold"])]
                 if len(fired):
-                    first = fired["week_start"].min()
-                    lead_rows.append({
-                        "unit": u, "season": int(yr),
-                        "first_alarm": str(pd.Timestamp(first).date()),
-                        "onset_week": str(pd.Timestamp(onset).date()),
-                        "peak_week": str(pd.Timestamp(peak).date()),
-                        "lead_weeks_to_onset": int((onset - first).days / 7),
-                        "lead_weeks_to_peak": int((peak - first).days / 7)})
+                    _leads.append((onset - fired["week_start"].min()).days / 7)
+            if _leads:
+                _a = np.asarray(_leads, float)
+                lead_rows.append({
+                    "operating_rule": _rule_col.replace("_alert_budget", "top ")
+                                               .replace("_alert_sens", "sensitivity target ")
+                                      + ("% of districts per week"
+                                         if "budget" in _rule_col else "% fitted on 2023"),
+                    "n_district_seasons_with_prior_alarm": len(_a),
+                    "median_lead_weeks": round(float(np.median(_a)), 1),
+                    "iqr_lo": round(float(np.percentile(_a, 25)), 1),
+                    "iqr_hi": round(float(np.percentile(_a, 75)), 1),
+                    "max_lead_weeks": round(float(_a.max()), 1)})
+
+    if h == H_ALARM:
             for b, g in te.groupby("block"):
                 if g[ycol].nunique() > 1:
                     div_rows.append({"division": b, "n_unit_weeks": len(g),
@@ -1705,15 +1912,107 @@ for h in HORIZONS:
                                      "PR_AUC": round(float(average_precision_score(g[ycol], g.p)), 4)})
 
 save_table("table7a_alarm_performance", pd.DataFrame(alarm_rows),
-           "Alarm performance at fixed public-health sensitivity")
+           "Two operating rules, neither using test labels. The alert-budget rows rank "
+           "districts within each week and alert the top k% - deployable under fixed "
+           "field capacity, and unaffected by base-rate shift. The sensitivity-target "
+           f"rows fit a threshold on {SEL_VALID} and freeze it; they are reported to show "
+           "that such a threshold does NOT transfer, because the alarm base rate falls "
+           "from 0.372 in 2023 to 0.143 in the test years")
 LEAD = save_table("table7b_alarm_lead_time", pd.DataFrame(lead_rows),
-                  "Weeks of warning before outbreak onset and before peak, h=2, sensitivity 0.80")
+                  f"Lead time at h={H_ALARM} under EVERY operating rule tested, not at a "
+                  "chosen one. The spread across rules is the result: the median ranges "
+                  "from a few weeks to most of a season depending only on how often the "
+                  "rule is allowed to fire, so this design does not identify lead time "
+                  "and no single figure from this table should be quoted as the warning "
+                  "the system provides")
 save_table("table7c_divisional_alarm", pd.DataFrame(div_rows),
-           "Alarm discrimination by division, h=2")
+           f"Alarm discrimination by division, h={H_ALARM}. ROC and PR are threshold-free "
+           "and therefore the only alarm numbers that do not depend on the operating rule")
 if len(LEAD):
-    log.info("lead time to outbreak onset: median %.0f wk (IQR %.0f-%.0f) | to peak: median %.0f wk | n=%d district-seasons",
-             LEAD.lead_weeks_to_onset.median(), LEAD.lead_weeks_to_onset.quantile(.25),
-             LEAD.lead_weeks_to_onset.quantile(.75), LEAD.lead_weeks_to_peak.median(), len(LEAD))
+    log.info("[audit] lead time by operating rule (median wk): %s - range %.0f-%.0f, "
+             "so lead time is not identifiable in this design",
+             dict(zip(LEAD.operating_rule, LEAD.median_lead_weeks)),
+             LEAD.median_lead_weeks.min(), LEAD.median_lead_weeks.max())
+
+
+# %%
+# =============================================================================
+# CELL 10b — What the alarm gets wrong, and whether its probabilities mean anything
+# =============================================================================
+# Two gaps the audit found. (a) Twenty-five tables and none of them said what the
+# model gets wrong. (b) A paper arguing that calibration is under-examined never
+# checked the calibration of its own alarm probabilities.
+_h = H_ALARM
+_yc = f"target_alarm_{_h}w"
+_sub = MD[MD[_yc].notna()]
+_tr = _sub[_sub.year <= ALARM_TRAIN_MAX]
+_te = _sub[_sub.year.isin(TEST_YEARS)].copy()
+_te["p"] = np.mean([lgb.LGBMClassifier(**{**LGB_CLF, "random_state": sd})
+                    .fit(_tr[FD_FULL], _tr[_yc].astype(int))
+                    .predict_proba(_te[FD_FULL])[:, 1] for sd in SEEDS], axis=0)
+_te["_y"] = _te[_yc].astype(int)
+_te["_tert"] = _te["unit"].map({u: _TERT_NAME[g] for u, g in BURDEN_G.items()})
+
+# --- (a) probability calibration -------------------------------------------------
+_brier = float(np.mean((_te["p"] - _te["_y"]) ** 2))
+_base = float(_te["_y"].mean())
+_bss = 1 - _brier / (_base * (1 - _base)) if 0 < _base < 1 else np.nan
+cal_rows = [{"bin": f"{lo:.1f}-{hi:.1f}",
+             "n": int(m.sum()),
+             "mean_predicted": round(float(_te.loc[m, "p"].mean()), 4) if m.sum() else np.nan,
+             "observed_frequency": round(float(_te.loc[m, "_y"].mean()), 4) if m.sum() else np.nan}
+            for lo, hi in zip(np.arange(0, 1, 0.1), np.arange(0.1, 1.01, 0.1))
+            for m in [(_te["p"] >= lo) & (_te["p"] < hi if hi < 1 else _te["p"] <= 1)]]
+CALP = pd.DataFrame([r for r in cal_rows if r["n"] > 0])
+if len(CALP):
+    _ece = float((CALP["n"] / CALP["n"].sum() *
+                  (CALP["mean_predicted"] - CALP["observed_frequency"]).abs()).sum())
+else:
+    _ece = np.nan
+CALP.attrs["brier"] = _brier
+save_table("table15_alarm_probability_calibration", CALP,
+           f"Reliability of the h={_h} alarm probabilities on the test years. "
+           f"Brier {_brier:.4f}, Brier skill score vs the base rate {_bss:.4f}, "
+           f"expected calibration error {_ece:.4f}. The paper argues interval "
+           "calibration is neglected; this holds the classification arm to the "
+           "same standard")
+print(CALP.to_string(index=False))
+log.info("alarm probabilities: Brier %.4f, BSS %.4f, ECE %.4f", _brier, _bss, _ece)
+
+# --- (b) what it gets wrong, at the frozen threshold ------------------------------
+# Errors are characterised at the rule a health unit would actually run: the weekly
+# top-10% alert budget. The frozen sensitivity threshold fires on nearly everything in
+# the test years, so its "errors" would describe a broken operating point rather than
+# the model.
+_wr = _te.groupby("week_start")["p"].rank(ascending=False, method="first")
+_wn = _te.groupby("week_start")["p"].transform("size")
+_te["_pred"] = (_wr <= np.maximum(1, np.round(0.10 * _wn))).astype(int)
+
+err_rows = []
+if True:
+    for key, grp in [("burden tertile", "_tert"), ("division", "block")]:
+        for gname, g in _te.groupby(grp, observed=True):
+            tp = int(((g._pred == 1) & (g._y == 1)).sum()); fn = int(((g._pred == 0) & (g._y == 1)).sum())
+            fp = int(((g._pred == 1) & (g._y == 0)).sum()); tn = int(((g._pred == 0) & (g._y == 0)).sum())
+            err_rows.append({
+                "stratum_type": key, "stratum": str(gname), "n_unit_weeks": len(g),
+                "outbreak_weeks": int(g._y.sum()),
+                "sensitivity": round(tp / (tp + fn), 3) if tp + fn else np.nan,
+                "missed_outbreak_weeks": fn,
+                "false_alarms": fp,
+                "false_alarm_rate": round(fp / (fp + tn), 4) if fp + tn else np.nan,
+                "median_cases_when_missed": round(float(g.loc[(g._pred == 0) & (g._y == 1),
+                                                              "cases_lag0"].median()), 1)
+                if fn else np.nan,
+                "median_cases_when_false_alarm": round(float(g.loc[(g._pred == 1) & (g._y == 0),
+                                                                   "cases_lag0"].median()), 1)
+                if fp else np.nan})
+ERR = save_table("table14_error_analysis", pd.DataFrame(err_rows),
+                 f"Where the h={_h} alarm fails under the weekly top-10% alert budget, by "
+                 "burden tertile and by division. A system that misses outbreaks only in "
+                 "low-burden districts is a different proposition from one that misses "
+                 "them everywhere")
+print(ERR.to_string(index=False))
 
 
 # %%
@@ -1725,7 +2024,10 @@ ABLATION = {
     "+ climate":              G_AR + G_SEASON + G_CLIMATE + G_CLIMATE_EXTRA,
     "+ satellite":            G_AR + G_SEASON + G_CLIMATE + G_CLIMATE_EXTRA + G_SAT + G_STATIC,
     "+ search trends":        G_AR + G_SEASON + G_CLIMATE + G_CLIMATE_EXTRA + G_SAT + G_STATIC + G_TRENDS,
-    "+ mobility & spillover": G_AR + G_SEASON + G_CLIMATE + G_CLIMATE_EXTRA + G_SAT + G_STATIC + G_TRENDS + G_MOBILITY + G_SURV,
+    # G_SURV used to be bundled in with mobility, so its contribution was never
+    # visible. Split into two rungs: the paper can now say what each is worth.
+    "+ mobility & spillover": G_AR + G_SEASON + G_CLIMATE + G_CLIMATE_EXTRA + G_SAT + G_STATIC + G_TRENDS + G_MOBILITY,
+    "+ surveillance":         G_AR + G_SEASON + G_CLIMATE + G_CLIMATE_EXTRA + G_SAT + G_STATIC + G_TRENDS + G_MOBILITY + G_SURV,
 }
 rows = []
 for h in [1, 2, 4]:
@@ -1810,7 +2112,10 @@ res = resolution_summary(MD, FD_SHR, "district (64 units)")
 if MV is not None:
     res = pd.concat([res, resolution_summary(MV, FV_SHR, "divisional (8 units)")], ignore_index=True)
 res = save_table("table9_resolution_ablation", res,
-                 "Skill by spatial resolution, shared feature set only")
+                 f"Skill by spatial resolution, SHARED feature set only "
+                 f"({len(FD_SHR)} features, identical at both resolutions). These skill "
+                 f"numbers are lower than table2's ({len(FD_FULL)} features) by "
+                 "construction and the two must not be compared row to row")
 
 # Contribution 2 is a difference-in-differences claim: the anchored-minus-level skill
 # gap is LARGER at coarse resolution. That needs a test, not two columns side by side.
@@ -1958,6 +2263,317 @@ SENS = save_table("table11_data_quality_sensitivity", pd.DataFrame(sens_rows),
                   "A: missing-report zeros. B: CHIRPS-vs-POWER rainfall mismatch. "
                   "Read `anchored`/`level_Tweedie` in the units given by `metric`")
 print(SENS.to_string(index=False))
+
+
+# %%
+# =============================================================================
+# CELL 12e — Would the results survive real reporting latency?
+# =============================================================================
+# The audit's hidden assumption: satellite composites, search trends and same-week
+# surveillance are used at week t as though a forecaster standing at t already had
+# them. MODIS and VIIRS carry days-to-weeks processing latency, Google Trends is
+# revised, and DGHS counts are backfilled. No vintaged archive exists to settle this
+# empirically, but the assumption CAN be stress-tested: delay every latent covariate
+# by one and two extra weeks and re-run. If the headline results hold, the same-week
+# assumption is not doing the work.
+LATENT = [c for c in (G_SAT + G_TRENDS + G_SURV) if c in MD.columns]
+log.info("latency stress test delays %d covariates: %s", len(LATENT), LATENT[:6])
+
+# The delays tested run out to six weeks because the Cox's Bazar cross-check
+# (table18) puts the empirical onset-to-report lag at five weeks, not one or two. A
+# stress test gentler than the lag the data actually shows would prove nothing.
+lat_rows = []
+for _delay in [0, 1, 2, 4, 6]:
+    Mx = MD.copy()
+    if _delay:
+        Mx = Mx.sort_values(["unit", "week_start"])
+        Mx[LATENT] = Mx.groupby("unit")[LATENT].shift(_delay)
+        Mx[LATENT] = Mx.groupby("unit")[LATENT].transform(lambda c: c.ffill())
+    for _h in [1, 2]:
+        Px = rolling_origin(Mx, FD_FULL, _h, arima_tag=None)
+        _b = mean_absolute_error(Px.y, Px.persistence)
+        _sk = 100 * (1 - mean_absolute_error(Px.y, Px.anchored) / _b)
+        Ix = interval_run(Mx, FD_FULL, _h, "mondrian_adaptive", groups=BURDEN_G)
+        Ix["_g"] = Ix["unit"].map(BURDEN_G)
+        _cov = float(((Ix.y >= Ix.lo) & (Ix.y <= Ix.hi)).mean())
+        _agg = (Ix.assign(_c=((Ix.y >= Ix.lo) & (Ix.y <= Ix.hi)).astype(int))
+                  .groupby("_g")["_c"].agg(["sum", "count"]))
+        _gap = np.nan
+        if {0, 2} <= set(_agg.index):
+            _gap = (_agg.loc[0, "sum"] / _agg.loc[0, "count"]
+                    - _agg.loc[2, "sum"] / _agg.loc[2, "count"])
+        lat_rows.append({"extra_delay_weeks": _delay, "horizon_weeks": _h,
+                         "anchored_skill_pct": round(float(_sk), 2),
+                         "coverage_group_conditional": round(_cov, 4),
+                         "burden_gap": round(float(_gap), 4) if np.isfinite(_gap) else np.nan})
+
+LAT = save_table("table16_reporting_latency", pd.DataFrame(lat_rows),
+                 "Every satellite, search-trend and same-week surveillance covariate "
+                 "delayed by 1 and 2 extra weeks, simulating publication latency. The "
+                 "study cannot vintage its inputs, so this is the closest available test "
+                 "of whether the same-week availability assumption carries the results")
+print(LAT.to_string(index=False))
+if len(LAT):
+    _d0 = LAT[LAT.extra_delay_weeks == 0].set_index("horizon_weeks")
+    _d2 = LAT[LAT.extra_delay_weeks == 2].set_index("horizon_weeks")
+    log.info("[audit] two-week latency costs %s skill points; coverage moves %s",
+             list((_d0.anchored_skill_pct - _d2.anchored_skill_pct).round(2)),
+             list((_d2.coverage_group_conditional - _d0.coverage_group_conditional).round(4)))
+
+
+# %%
+# =============================================================================
+# CELL 12f — Does the optimism gap depend on how an outbreak is defined at all?
+# =============================================================================
+# Cell 9b swept the quantile and the floor, but both are the SAME kind of definition:
+# a per-district level threshold. If the gap only exists for level thresholds it is a
+# property of that construct rather than of the validation design. Two structurally
+# different definitions are added here: a WHO-style endemic channel (the district's own
+# mean + 2 SD for that epidemiological week, estimated on training years only) and a
+# growth-based definition (a sustained doubling over four weeks), which does not use a
+# level threshold at all.
+def _label_endemic_channel(M, k=2.0):
+    base = M[(M.year >= ALARM_BASE_MIN) & (M.year <= ALARM_TRAIN_MAX)]
+    st = base.groupby(["unit", "epi_week"])["cases"].agg(["mean", "std"]).reset_index()
+    st["chan"] = np.maximum(st["mean"] + k * st["std"].fillna(0.0), ALARM_MIN_CASES)
+    ch = M.merge(st[["unit", "epi_week", "chan"]], on=["unit", "epi_week"], how="left")
+    return np.maximum(ch["chan"].fillna(ALARM_MIN_CASES).values, ALARM_MIN_CASES)
+
+
+def _label_growth(M, h, mult=2.0):
+    lead = M[f"target_lead_{h}w"]
+    base = M["cases_lag0"].astype(float)
+    lab = ((lead >= mult * base) & (lead >= ALARM_MIN_CASES)).astype(float)
+    return lab.where(lead.notna())
+
+
+defn_rows = []
+for _name in ["per-district quantile (reported)", "endemic channel (mean + 2SD)",
+              "growth: doubling over the horizon"]:
+    Md = MD.copy()
+    _lead = Md[f"target_lead_{H_ALARM}w"]
+    if _name.startswith("per-district"):
+        _lab = Md[f"target_alarm_{H_ALARM}w"]
+    elif _name.startswith("endemic"):
+        _chan = _label_endemic_channel(Md)
+        _lab = (_lead >= _chan).astype(float).where(_lead.notna())
+    else:
+        _lab = _label_growth(Md, H_ALARM)
+    Ad = Md.loc[_lab.notna()].copy()
+    Ad["_y"] = _lab.loc[_lab.notna()].astype(int).values
+    if Ad["_y"].nunique() < 2 or Ad["_y"].sum() < 30:
+        continue
+
+    def _fd(tr, te):
+        pr = np.mean([lgb.LGBMClassifier(**{**LGB_CLF, "random_state": sd})
+                      .fit(tr[FD_FULL], tr["_y"]).predict_proba(te[FD_FULL])[:, 1]
+                      for sd in SEEDS], axis=0)
+        return pr, te["_y"].values
+
+    def _pd_(pairs):
+        ps, ys = zip(*pairs)
+        pp, yy = np.concatenate(ps), np.concatenate(ys)
+        return float(roc_auc_score(yy, pp)), float(average_precision_score(yy, pp))
+
+    _bl = sorted(Ad["block"].unique())
+    _t1, _e1 = train_test_split(Ad, test_size=0.20, random_state=SEED, stratify=Ad["_y"])
+    d1 = _pd_([_fd(_t1, _e1)])
+    d4 = _pd_([_fd(Ad[(Ad.year < ty) & (Ad.block != b)], Ad[(Ad.year == ty) & (Ad.block == b)])
+               for ty in TEST_YEARS for b in _bl
+               if Ad[(Ad.year == ty) & (Ad.block == b)]["_y"].nunique() > 1])
+    defn_rows.append({"outbreak_definition": _name, "base_rate": round(float(Ad["_y"].mean()), 4),
+                      "n_rows": len(Ad), "C1_ROC": round(d1[0], 4), "C4_ROC": round(d4[0], 4),
+                      "gap_ROC": round(d1[0] - d4[0], 4),
+                      "C1_PR": round(d1[1], 4), "C4_PR": round(d4[1], 4),
+                      "gap_PR": round(d1[1] - d4[1], 4)})
+
+DEFN = save_table("table17_outbreak_definition_sensitivity", pd.DataFrame(defn_rows),
+                  "The optimism gap under three structurally different outbreak "
+                  "definitions - a level threshold, an endemic channel, and a "
+                  "growth-rate rule that uses no level threshold. A gap that survives "
+                  "all three is a property of the validation design, not of the label")
+print(DEFN.to_string(index=False))
+if len(DEFN):
+    log.info("[audit] optimism gap by outbreak definition: ROC %s, PR %s",
+             list(DEFN.gap_ROC), list(DEFN.gap_PR))
+
+
+# %%
+# =============================================================================
+# CELL 12g — Independent within-country validation: Cox's Bazar symptom onset
+# =============================================================================
+# This study is scoped to Bangladesh, so its external validity is validity across
+# unseen districts, seasons and DATA SOURCES within Bangladesh - not transfer to
+# another country. The deposit holds 35,581 individually recorded Cox's Bazar patients
+# with symptom-onset dates, collected through a different system from the DGHS
+# aggregate returns the model is trained on. That gives two things nothing else here
+# can: an independent reconstruction of one district's epidemic curve, and a direct
+# estimate of the reporting delay, because onset precedes reporting by construction.
+CB_PATH = _find("coxsbazar_dengue_2021_2024.xlsx")
+cb_rows = []
+if CB_PATH:
+    try:
+        _cb = pd.read_excel(CB_PATH)
+        _onset = pd.to_datetime(_cb["Symptom Onset"], errors="coerce")
+        _cbw = (_onset.dropna().dt.to_period("W").dt.start_time
+                .value_counts().sort_index().rename("onset_cases"))
+        _cbw.index.name = "week_start"
+        _cbw = _cbw.reset_index()
+
+        _pan = (PANEL_D[PANEL_D.unit.str.contains("Cox", case=False, na=False)]
+                [["week_start", "cases"]].rename(columns={"cases": "reported_cases"}))
+        _pan["week_start"] = pd.to_datetime(_pan["week_start"])
+        _cbw["week_start"] = pd.to_datetime(_cbw["week_start"])
+        # Align both to Monday-start weeks so the join is not defeated by convention.
+        for _df in (_cbw, _pan):
+            _df["week_start"] = _df["week_start"] - pd.to_timedelta(
+                _df["week_start"].dt.weekday, unit="D")
+        _cbw = _cbw.groupby("week_start", as_index=False)["onset_cases"].sum()
+        _pan = _pan.groupby("week_start", as_index=False)["reported_cases"].sum()
+        _mg = _pan.merge(_cbw, on="week_start", how="inner").sort_values("week_start")
+
+        if len(_mg) >= 30:
+            # Cross-correlate to find the delay at which the two series agree best.
+            # A positive best lag means reported counts follow onset - the reporting
+            # lag the audit flagged as an untested assumption.
+            for _lag in range(-2, 7):
+                a = _mg["onset_cases"].values
+                b = _mg["reported_cases"].shift(-_lag).values
+                m = ~np.isnan(b)
+                if m.sum() < 25:
+                    continue
+                r = float(np.corrcoef(a[m], b[m])[0, 1])
+                rs = float(stats.spearmanr(a[m], b[m])[0])
+                cb_rows.append({"lag_weeks_reported_after_onset": _lag,
+                                "n_weeks": int(m.sum()),
+                                "pearson_r": round(r, 4), "spearman_rho": round(rs, 4)})
+            log.info("Cox's Bazar cross-check: %d overlapping weeks, %d onset cases vs "
+                     "%d reported", len(_mg), int(_mg.onset_cases.sum()),
+                     int(_mg.reported_cases.sum()))
+    except Exception as e:
+        log.warning("Cox's Bazar cross-check unavailable: %s", e)
+
+CB = pd.DataFrame(cb_rows)
+if len(CB):
+    _best = CB.loc[CB.pearson_r.idxmax()]
+    CB["best_lag"] = CB.lag_weeks_reported_after_onset == _best.lag_weeks_reported_after_onset
+    log.info("[audit] Cox's Bazar: independent onset series correlates r=%.3f with the "
+             "DGHS reported series at a %d-week lag (r=%.3f at lag 0)",
+             _best.pearson_r, int(_best.lag_weeks_reported_after_onset),
+             float(CB[CB.lag_weeks_reported_after_onset == 0].pearson_r.iloc[0])
+             if (CB.lag_weeks_reported_after_onset == 0).any() else np.nan)
+save_table("table18_coxsbazar_independent_check", CB,
+           "One district's epidemic curve rebuilt from 35,581 individual symptom-onset "
+           "records and compared with the DGHS aggregate series the models are trained "
+           "on. The lag at which correlation peaks is an empirical estimate of the "
+           "reporting delay, which no other source in this study can provide")
+print(CB.to_string(index=False))
+
+
+# %%
+# =============================================================================
+# CELL 12h — Generalization across seasons and districts, within Bangladesh
+# =============================================================================
+# Prospective evaluation uses two test seasons, which is what the 2020-21 surveillance
+# gap allows. Season-to-season VARIANCE is a different question and more of the panel
+# can speak to it: hold out each season in turn. Only the rows marked prospective are
+# forecasts; the others train on data after the held-out season and are reported as
+# generalization probes, not as forecasting skill. Conflating the two would be exactly
+# the overstatement this study is trying to avoid.
+gen_rows = []
+for _season in sorted(MD.year.unique()):
+    _tr = MD[(MD.year != _season) & MD["target_lead_2w"].notna()]
+    _te = MD[(MD.year == _season) & MD["target_lead_2w"].notna()]
+    if len(_te) < 200 or len(_tr) < 500:
+        continue
+    _pred = np.mean([lgb.LGBMRegressor(**{**LGB_REG, "random_state": sd},
+                                       **GROWTH_OBJECTIVES[GROWTH_OBJ_NAME])
+                     .fit(_tr[FD_FULL], _tr["target_growth_2w"]).predict(_te[FD_FULL])
+                     for sd in SEEDS], axis=0)
+    _yhat = np.clip((_te["cases_lag0"].values + 1.0) * np.exp(_pred) - 1, 0, None)
+    _y = _te["target_lead_2w"].values
+    _b = mean_absolute_error(_y, _te["cases_lag0"].values)
+    gen_rows.append({
+        "held_out_season": int(_season), "n_unit_weeks": len(_te),
+        "cases_in_season": int(_te["cases"].sum()),
+        "skill_vs_persistence_pct": round(100 * (1 - mean_absolute_error(_y, _yhat) / _b), 2),
+        "evaluation": "prospective" if _season in TEST_YEARS else
+                      "retrospective probe (trains on later seasons)"})
+
+# Spatial generalization: how much does prospective skill vary BY DISTRICT?
+P2 = PRED[2]
+_per_unit = []
+for u, g in P2.groupby("unit"):
+    _bb = mean_absolute_error(g.y, g.persistence)
+    if _bb > 0:
+        _per_unit.append(100 * (1 - mean_absolute_error(g.y, g.anchored) / _bb))
+_pu = np.asarray(_per_unit, float)
+GEN = pd.DataFrame(gen_rows)
+save_table("table19_generalization_within_bangladesh", GEN,
+           "Skill with each season held out. Two seasons are prospective; the rest are "
+           "retrospective probes of season-to-season variance and are labelled as such. "
+           f"Across the 64 districts, prospective h=2 skill has median {np.median(_pu):.1f}%, "
+           f"IQR {np.percentile(_pu, 25):.1f} to {np.percentile(_pu, 75):.1f}%, and is "
+           f"positive in {int((_pu > 0).sum())} of {len(_pu)} districts")
+print(GEN.to_string(index=False))
+log.info("[audit] per-district prospective skill: median %.1f%%, IQR %.1f-%.1f, "
+         "positive in %d of %d districts", np.median(_pu),
+         np.percentile(_pu, 25), np.percentile(_pu, 75), int((_pu > 0).sum()), len(_pu))
+
+
+# %%
+# =============================================================================
+# CELL 12i — Why does skill vanish on the 2023 season?
+# =============================================================================
+# table19 shows 0.2% skill when 2023 is held out, against 17-40% for every other
+# season. 2023 carried 321,593 cases against roughly 100,000 in the neighbouring
+# years, so two explanations compete. Either the model cannot extrapolate to a
+# magnitude regime absent from its training data, or persistence simply becomes hard
+# to beat when an epidemic grows this fast - in which case the low skill says
+# something about the BASELINE rather than about the model. Absolute errors separate
+# them: under the first, model error explodes; under the second, both errors explode
+# together and their ratio stays near one.
+coll_rows = []
+for _season in sorted(MD.year.unique()):
+    _tr = MD[(MD.year != _season) & MD["target_lead_2w"].notna()]
+    _te = MD[(MD.year == _season) & MD["target_lead_2w"].notna()].copy()
+    if len(_te) < 200 or len(_tr) < 500:
+        continue
+    _pr = np.mean([lgb.LGBMRegressor(**{**LGB_REG, "random_state": sd},
+                                     **GROWTH_OBJECTIVES[GROWTH_OBJ_NAME])
+                   .fit(_tr[FD_FULL], _tr["target_growth_2w"]).predict(_te[FD_FULL])
+                   for sd in SEEDS], axis=0)
+    _te["_yhat"] = np.clip((_te["cases_lag0"].values + 1.0) * np.exp(_pr) - 1, 0, None)
+    _te["_y"] = _te["target_lead_2w"].values
+    _te["_pers"] = _te["cases_lag0"].values
+    # Tercile by the size of the district-week, so "does it fail on the big weeks?"
+    # is answered directly rather than inferred from a pooled average.
+    _te["_tier"] = pd.qcut(_te["_pers"].rank(method="first"), 3,
+                           labels=["small weeks", "medium weeks", "large weeks"])
+    for _tier, g in _te.groupby("_tier", observed=True):
+        _mp = mean_absolute_error(g._y, g._pers)
+        _mm = mean_absolute_error(g._y, g._yhat)
+        coll_rows.append({
+            "held_out_season": int(_season), "week_size_tercile": str(_tier),
+            "n": len(g), "median_cases": round(float(g._pers.median()), 1),
+            "MAE_persistence": round(float(_mp), 2), "MAE_model": round(float(_mm), 2),
+            "skill_pct": round(100 * (1 - _mm / _mp), 2) if _mp > 0 else np.nan,
+            "mean_bias_model": round(float((g._yhat - g._y).mean()), 2),
+            "evaluation": "prospective" if _season in TEST_YEARS else "retrospective probe"})
+
+COLL = save_table("table20_season_collapse_diagnostic", pd.DataFrame(coll_rows),
+                  "Absolute errors, not just skill, for each held-out season split by "
+                  "how large the district-week is. Skill is a ratio and hides whether a "
+                  "low value means the model failed or the baseline got hard to beat")
+print(COLL.to_string(index=False))
+if len(COLL):
+    _c23 = COLL[COLL.held_out_season == 2023]
+    _c24 = COLL[COLL.held_out_season == 2024]
+    if len(_c23) and len(_c24):
+        log.info("[audit] 2023 held out: MAE persistence %s vs model %s | "
+                 "2024: persistence %s vs model %s",
+                 list(_c23.MAE_persistence), list(_c23.MAE_model),
+                 list(_c24.MAE_persistence), list(_c24.MAE_model))
 
 
 # %%
@@ -2252,18 +2868,26 @@ for ax, col, lab in zip(axes, ["ROC_AUC", "PR_AUC"], ["ROC-AUC", "PR-AUC"]):
 axes[0].set_title("Discrimination collapses under honest validation", loc="left")
 _save(fig, "fig5_optimism_gap")
 
-# --- F6: alarm lead time -----------------------------------------------------
+# --- F6: lead time is not identifiable ---------------------------------------
+# The old version of this figure was a histogram of lead times at one operating
+# rule, which presented an artifact as a result. What the data actually supports is
+# the spread ACROSS rules, so that is what the figure shows.
 if len(LEAD):
-    fig, ax = plt.subplots(figsize=(COL1, 2.3))
-    ax.hist(LEAD.lead_weeks_to_onset, bins=range(0, int(LEAD.lead_weeks_to_onset.max()) + 2),
-            color=PAL["green"], alpha=0.85, edgecolor="white", linewidth=0.6)
-    med = LEAD.lead_weeks_to_onset.median()
-    ax.axvline(med, color=PAL["verm"], lw=1.3)
-    ax.text(med + 0.25, ax.get_ylim()[1] * 0.88, f"median {med:.0f} wk",
-            fontsize=7.5, color=PAL["verm"])
-    ax.set_xlabel("Weeks of warning before the district crosses its outbreak threshold")
-    ax.set_ylabel("District-seasons")
-    ax.set_title("Operational lead time at 80% sensitivity", loc="left")
+    L6 = LEAD.sort_values("median_lead_weeks")
+    fig, ax = plt.subplots(figsize=(COL1, 2.5))
+    ypos = np.arange(len(L6))
+    ax.hlines(ypos, L6.iqr_lo, L6.iqr_hi, color=PAL["green"], lw=3.2, alpha=0.55)
+    ax.plot(L6.median_lead_weeks, ypos, "o", color=PAL["verm"], ms=5, zorder=3)
+    for i, (_, r) in enumerate(L6.iterrows()):
+        ax.text(r.median_lead_weeks, i + 0.24, f"{r.median_lead_weeks:.0f}",
+                ha="center", fontsize=7, color=PAL["verm"])
+    ax.set_yticks(ypos)
+    ax.set_yticklabels([t.replace(" of districts per week", "").replace(" fitted on 2023", "")
+                        for t in L6.operating_rule], fontsize=7)
+    ax.set_xlabel("Median weeks between first alarm and outbreak onset (bar = IQR)")
+    ax.set_xlim(left=0)
+    ax.set_title("Lead time is a property of the operating rule, not of the model",
+                 loc="left")
     _save(fig, "fig6_alarm_lead_time")
 
 
