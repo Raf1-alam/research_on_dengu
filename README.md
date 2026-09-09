@@ -220,7 +220,7 @@ unused/                             quarantined — read unused/README.md before
 generated from it for Kaggle and must never be edited directly.
 
 ```bash
-pip install numpy pandas scipy scikit-learn lightgbm statsmodels matplotlib openpyxl
+pip install numpy pandas scipy scikit-learn lightgbm statsmodels matplotlib
 
 python notebooks/ml_notebook3.py          # ~25 min on 4 CPU cores; no GPU needed
 python scripts/build_notebook.py          # regenerate the .ipynb after any source edit

@@ -1,9 +1,21 @@
-horizon_weeks,target_sensitivity,achieved_sensitivity,precision,false_alarm_rate,threshold
-1,0.8,0.8,0.423,0.1404,0.0029
-1,0.9,0.901,0.336,0.2286,0.0008
-2,0.8,0.8,0.372,0.1742,0.0017
-2,0.9,0.901,0.299,0.2712,0.0005
-3,0.8,0.8,0.326,0.2128,0.0025
-3,0.9,0.901,0.282,0.2946,0.0009
-4,0.8,0.8,0.282,0.2623,0.0031
-4,0.9,0.901,0.269,0.3147,0.0012
+horizon_weeks,rule,target_sensitivity,achieved_sensitivity,precision,false_alarm_rate,alerts_per_week,threshold,threshold_source
+1,"alert budget, top 5% of districts",,0.12,0.292,0.0375,3.0,,no labels used
+1,"alert budget, top 10% of districts",,0.191,0.232,0.0813,6.0,,no labels used
+1,"alert budget, top 20% of districts",,0.343,0.193,0.1851,13.0,,no labels used
+1,sensitivity target fitted on 2023,0.8,0.983,0.24,0.4016,29.9,0.0002,"fitted on 2023, frozen"
+1,sensitivity target fitted on 2023,0.9,0.996,0.181,0.5793,40.1,0.0,"fitted on 2023, frozen"
+2,"alert budget, top 5% of districts",,0.121,0.295,0.0373,3.0,,no labels used
+2,"alert budget, top 10% of districts",,0.198,0.241,0.0803,6.0,,no labels used
+2,"alert budget, top 20% of districts",,0.346,0.194,0.1847,13.0,,no labels used
+2,sensitivity target fitted on 2023,0.8,0.987,0.233,0.4177,30.9,0.0002,"fitted on 2023, frozen"
+2,sensitivity target fitted on 2023,0.9,0.999,0.152,0.7177,48.0,0.0,"fitted on 2023, frozen"
+3,"alert budget, top 5% of districts",,0.112,0.273,0.0385,3.0,,no labels used
+3,"alert budget, top 10% of districts",,0.183,0.222,0.0823,6.0,,no labels used
+3,"alert budget, top 20% of districts",,0.321,0.18,0.1879,13.0,,no labels used
+3,sensitivity target fitted on 2023,0.8,0.992,0.207,0.4886,34.9,0.0001,"fitted on 2023, frozen"
+3,sensitivity target fitted on 2023,0.9,0.999,0.137,0.8102,53.2,0.0,"fitted on 2023, frozen"
+4,"alert budget, top 5% of districts",,0.104,0.254,0.0395,3.0,,no labels used
+4,"alert budget, top 10% of districts",,0.17,0.206,0.084,6.0,,no labels used
+4,"alert budget, top 20% of districts",,0.311,0.174,0.1893,13.0,,no labels used
+4,sensitivity target fitted on 2023,0.8,1.0,0.117,0.9693,62.3,0.0,"fitted on 2023, frozen"
+4,sensitivity target fitted on 2023,0.9,1.0,0.114,1.0,64.0,0.0,"fitted on 2023, frozen"

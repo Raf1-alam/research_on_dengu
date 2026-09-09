@@ -1,0 +1,6 @@
+held_out_season,n_unit_weeks,cases_in_season,skill_vs_persistence_pct,evaluation
+2022,2816,61875,33.75,retrospective probe (trains on later seasons)
+2023,3328,321593,-2.96,retrospective probe (trains on later seasons)
+2024,3392,101016,29.07,prospective
+2025,3328,102562,12.26,prospective
+2026,1536,4900,22.92,retrospective probe (trains on later seasons)

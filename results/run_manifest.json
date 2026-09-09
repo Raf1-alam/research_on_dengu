@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-09-09T09:41:06+00:00",
+  "generated_utc": "2026-09-09T17:27:11+00:00",
   "seed": 42,
   "seed_ensemble": [
     42,
@@ -90,6 +90,10 @@
     "datasets/abdullahomarsayeem/dengue-dataset-bangladesh/nasa_power_divisions_daily.csv": {
       "sha256": "31b97c51c194db5f7665b03becd153d98aa693622cba3d546b0cdfff1ead603f",
       "bytes": 664417
+    },
+    "datasets/abdullahomarsayeem/dengue-dataset-bangladesh/coxsbazar_dengue_2021_2024.csv": {
+      "sha256": "ede4b8e6165e5c33a6c3ce4839ecc7aa090b38a4d8bd811b3a6c213998d77492",
+      "bytes": 13359293
     }
   },
   "tables": {
@@ -114,8 +118,8 @@
       "path": "/kaggle/working/results/table1d_model_selection.csv"
     },
     "table2_forecast_shootout": {
-      "rows": 36,
-      "caption": "Multi-horizon prospective forecast comparison, district resolution. The ARIMA row uses a published order fitted at a different resolution - see table0 before quoting it",
+      "rows": 44,
+      "caption": "Multi-horizon prospective forecast comparison, district resolution, FULL feature set (77 features). Skill numbers are only comparable across tables that use the same feature set: table9 uses the shared set and is lower for that reason alone. The ARIMA row uses a published order fitted at a different resolution - see table0 before quoting it",
       "path": "/kaggle/working/results/table2_forecast_shootout.csv"
     },
     "table3_uncertainty_on_deltas": {
@@ -148,6 +152,11 @@
       "caption": "Per-district coverage under split conformal against burden and the size covariates burden might be proxying for. The last two rows are partial correlations: burden controlling for density, and density controlling for burden. Only the one that survives its control can be called the mechanism",
       "path": "/kaggle/working/results/table5d_coverage_covariates.csv"
     },
+    "table5e_gradient_parameterisation": {
+      "rows": 12,
+      "caption": "The burden gradient rebuilt in level space. If it appears under BOTH target parameterisations the finding generalises; if it appears only under the anchored log-ratio it must be scoped to that choice and cannot be described as a property of conformal prediction on epidemic counts",
+      "path": "/kaggle/working/results/table5e_gradient_parameterisation.csv"
+    },
     "table6_optimism_gap": {
       "rows": 5,
       "caption": "2x2 space-time validation matrix",
@@ -159,22 +168,32 @@
       "path": "/kaggle/working/results/table6b_alarm_threshold_sensitivity.csv"
     },
     "table7a_alarm_performance": {
-      "rows": 8,
-      "caption": "Alarm performance at fixed public-health sensitivity",
+      "rows": 20,
+      "caption": "Two operating rules, neither using test labels. The alert-budget rows rank districts within each week and alert the top k% - deployable under fixed field capacity, and unaffected by base-rate shift. The sensitivity-target rows fit a threshold on 2023 and freeze it; they are reported to show that such a threshold does NOT transfer, because the alarm base rate falls from 0.372 in 2023 to 0.143 in the test years",
       "path": "/kaggle/working/results/table7a_alarm_performance.csv"
     },
     "table7b_alarm_lead_time": {
-      "rows": 89,
-      "caption": "Weeks of warning before outbreak onset and before peak, h=2, sensitivity 0.80",
+      "rows": 5,
+      "caption": "Lead time at h=2 under EVERY operating rule tested, not at a chosen one. The spread across rules is the result: the median ranges from a few weeks to most of a season depending only on how often the rule is allowed to fire, so this design does not identify lead time and no single figure from this table should be quoted as the warning the system provides",
       "path": "/kaggle/working/results/table7b_alarm_lead_time.csv"
     },
     "table7c_divisional_alarm": {
       "rows": 8,
-      "caption": "Alarm discrimination by division, h=2",
+      "caption": "Alarm discrimination by division, h=2. ROC and PR are threshold-free and therefore the only alarm numbers that do not depend on the operating rule",
       "path": "/kaggle/working/results/table7c_divisional_alarm.csv"
     },
+    "table15_alarm_probability_calibration": {
+      "rows": 10,
+      "caption": "Reliability of the h=2 alarm probabilities on the test years. Brier 0.0900, Brier skill score vs the base rate 0.1090, expected calibration error 0.0839. The paper argues interval calibration is neglected; this holds the classification arm to the same standard",
+      "path": "/kaggle/working/results/table15_alarm_probability_calibration.csv"
+    },
+    "table14_error_analysis": {
+      "rows": 11,
+      "caption": "Where the h=2 alarm fails under the weekly top-10% alert budget, by burden tertile and by division. A system that misses outbreaks only in low-burden districts is a different proposition from one that misses them everywhere",
+      "path": "/kaggle/working/results/table14_error_analysis.csv"
+    },
     "table8_covariate_ablation": {
-      "rows": 15,
+      "rows": 18,
       "caption": "Marginal value of each covariate group, anchored-growth model",
       "path": "/kaggle/working/results/table8_covariate_ablation.csv"
     },
@@ -185,7 +204,7 @@
     },
     "table9_resolution_ablation": {
       "rows": 32,
-      "caption": "Skill by spatial resolution, shared feature set only",
+      "caption": "Skill by spatial resolution, SHARED feature set only (42 features, identical at both resolutions). These skill numbers are lower than table2's (77 features) by construction and the two must not be compared row to row",
       "path": "/kaggle/working/results/table9_resolution_ablation.csv"
     },
     "table9b_resolution_significance": {
@@ -197,6 +216,31 @@
       "rows": 16,
       "caption": "Do the two audit defects change the conclusions? A: missing-report zeros. B: CHIRPS-vs-POWER rainfall mismatch. Read `anchored`/`level_Tweedie` in the units given by `metric`",
       "path": "/kaggle/working/results/table11_data_quality_sensitivity.csv"
+    },
+    "table16_reporting_latency": {
+      "rows": 10,
+      "caption": "Every satellite, search-trend and same-week surveillance covariate delayed by 1 and 2 extra weeks, simulating publication latency. The study cannot vintage its inputs, so this is the closest available test of whether the same-week availability assumption carries the results",
+      "path": "/kaggle/working/results/table16_reporting_latency.csv"
+    },
+    "table17_outbreak_definition_sensitivity": {
+      "rows": 3,
+      "caption": "The optimism gap under three structurally different outbreak definitions - a level threshold, an endemic channel, and a growth-rate rule that uses no level threshold. A gap that survives all three is a property of the validation design, not of the label",
+      "path": "/kaggle/working/results/table17_outbreak_definition_sensitivity.csv"
+    },
+    "table18_coxsbazar_independent_check": {
+      "rows": 9,
+      "caption": "One district's epidemic curve rebuilt from 35,581 individual symptom-onset records and compared with the DGHS aggregate series the models are trained on. The lag at which correlation peaks is an empirical estimate of the reporting delay, which no other source in this study can provide",
+      "path": "/kaggle/working/results/table18_coxsbazar_independent_check.csv"
+    },
+    "table19_generalization_within_bangladesh": {
+      "rows": 5,
+      "caption": "Skill with each season held out. Two seasons are prospective; the rest are retrospective probes of season-to-season variance and are labelled as such. Across the 64 districts, prospective h=2 skill has median 17.4%, IQR 10.5 to 22.1%, and is positive in 60 of 64 districts",
+      "path": "/kaggle/working/results/table19_generalization_within_bangladesh.csv"
+    },
+    "table20_season_collapse_diagnostic": {
+      "rows": 15,
+      "caption": "Absolute errors, not just skill, for each held-out season split by how large the district-week is. Skill is a ratio and hides whether a low value means the model failed or the baseline got hard to beat",
+      "path": "/kaggle/working/results/table20_season_collapse_diagnostic.csv"
     },
     "table12_seed_stability": {
       "rows": 16,

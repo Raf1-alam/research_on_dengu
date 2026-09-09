@@ -1,0 +1,4 @@
+outbreak_definition,base_rate,n_rows,C1_ROC,C4_ROC,gap_ROC,C1_PR,C4_PR,gap_PR
+per-district quantile (reported),0.1412,14400,0.9858,0.8917,0.0942,0.943,0.4686,0.4745
+endemic channel (mean + 2SD),0.0805,14400,0.9315,0.7734,0.1581,0.6537,0.2501,0.4036
+growth: doubling over the horizon,0.0972,14400,0.9204,0.8219,0.0985,0.6086,0.3211,0.2876

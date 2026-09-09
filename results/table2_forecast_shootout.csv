@@ -3,6 +3,8 @@ horizon_weeks,model,key,MAE,RMSE,wMAPE_pct,skill_vs_persistence_pct
 1,Seasonal naive,snaive,46.222,253.097,152.43,-409.22
 1,"ARIMA(2, 1, 2) per district (order from Naher 2022, national monthly)",arima,13.396,55.33,44.17,-47.58
 1,Log-AR(4) ridge,ridge_ar4,10.276,46.511,33.89,-13.21
+1,"Negative-binomial GLM (log-pop covariate, estimated dispersion)",nb_glm,12.677,48.816,41.8,-39.66
+1,"MLP (64-32, early stopping)",mlp,11.799,69.467,38.91,-29.99
 1,LightGBM level (L2),level_L2,12.421,67.148,40.96,-36.84
 1,LightGBM level (Poisson),level_Poisson,9.212,41.944,30.38,-1.49
 1,LightGBM level (Tweedie),level_Tweedie,8.219,27.657,27.1,9.45
@@ -12,6 +14,8 @@ horizon_weeks,model,key,MAE,RMSE,wMAPE_pct,skill_vs_persistence_pct
 2,Seasonal naive,snaive,46.343,245.788,152.89,-278.8
 2,"ARIMA(2, 1, 2) per district (order from Naher 2022, national monthly)",arima,17.319,74.033,57.14,-41.56
 2,Log-AR(4) ridge,ridge_ar4,14.065,71.389,46.4,-14.96
+2,"Negative-binomial GLM (log-pop covariate, estimated dispersion)",nb_glm,15.841,59.286,52.26,-29.48
+2,"MLP (64-32, early stopping)",mlp,13.118,78.482,43.28,-7.22
 2,LightGBM level (L2),level_L2,14.719,71.681,48.56,-20.31
 2,LightGBM level (Poisson),level_Poisson,10.343,38.542,34.12,15.46
 2,LightGBM level (Tweedie),level_Tweedie,10.088,32.133,33.28,17.54
@@ -21,6 +25,8 @@ horizon_weeks,model,key,MAE,RMSE,wMAPE_pct,skill_vs_persistence_pct
 3,Seasonal naive,snaive,47.206,239.877,155.74,-196.84
 3,"ARIMA(2, 1, 2) per district (order from Naher 2022, national monthly)",arima,21.319,92.585,70.34,-34.06
 3,Log-AR(4) ridge,ridge_ar4,17.73,93.423,58.5,-11.49
+3,"Negative-binomial GLM (log-pop covariate, estimated dispersion)",nb_glm,19.259,71.23,63.54,-21.1
+3,"MLP (64-32, early stopping)",mlp,16.375,92.054,54.02,-2.97
 3,LightGBM level (L2),level_L2,17.719,78.984,58.46,-11.42
 3,LightGBM level (Poisson),level_Poisson,13.456,50.165,44.39,15.39
 3,LightGBM level (Tweedie),level_Tweedie,12.597,38.838,41.56,20.78
@@ -30,6 +36,8 @@ horizon_weeks,model,key,MAE,RMSE,wMAPE_pct,skill_vs_persistence_pct
 4,Seasonal naive,snaive,48.354,235.841,159.55,-149.27
 4,"ARIMA(2, 1, 2) per district (order from Naher 2022, national monthly)",arima,25.222,110.889,83.22,-30.02
 4,Log-AR(4) ridge,ridge_ar4,20.839,111.249,68.76,-7.43
+4,"Negative-binomial GLM (log-pop covariate, estimated dispersion)",nb_glm,21.557,77.783,71.13,-11.13
+4,"MLP (64-32, early stopping)",mlp,20.979,129.497,69.22,-8.15
 4,LightGBM level (L2),level_L2,21.531,89.005,71.04,-11.0
 4,LightGBM level (Poisson),level_Poisson,15.655,49.581,51.65,19.3
 4,LightGBM level (Tweedie),level_Tweedie,16.238,53.395,53.58,16.29

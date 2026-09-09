@@ -3,14 +3,17 @@ horizon_weeks,feature_set,n_features,MAE_anchored,skill_vs_persistence_pct,delta
 1,+ climate,52,8.124,10.5,-0.284
 1,+ satellite,62,7.965,12.25,-0.442
 1,+ search trends,66,7.818,13.87,-0.59
-1,+ mobility & spillover,77,7.856,13.45,-0.552
+1,+ mobility & spillover,74,7.827,13.77,-0.581
+1,+ surveillance,77,7.856,13.45,-0.552
 2,case history + season,22,11.346,7.26,0.0
 2,+ climate,52,10.495,14.22,-0.851
 2,+ satellite,62,10.095,17.48,-1.251
 2,+ search trends,66,10.127,17.23,-1.219
-2,+ mobility & spillover,77,9.779,20.07,-1.567
+2,+ mobility & spillover,74,10.262,16.12,-1.084
+2,+ surveillance,77,9.779,20.07,-1.567
 4,case history + season,22,16.986,12.44,0.0
 4,+ climate,52,15.644,19.35,-1.341
 4,+ satellite,62,14.757,23.92,-2.228
 4,+ search trends,66,16.919,12.78,-0.066
-4,+ mobility & spillover,77,16.274,16.11,-0.712
+4,+ mobility & spillover,74,15.028,22.53,-1.958
+4,+ surveillance,77,16.274,16.11,-0.712

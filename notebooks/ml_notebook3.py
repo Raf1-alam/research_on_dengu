@@ -2430,11 +2430,18 @@ if len(DEFN):
 # aggregate returns the model is trained on. That gives two things nothing else here
 # can: an independent reconstruction of one district's epidemic curve, and a direct
 # estimate of the reporting delay, because onset precedes reporting by construction.
-CB_PATH = _find("coxsbazar_dengue_2021_2024.xlsx")
+# CSV first. The workbook is the original deposit format, but Excel reading needs
+# openpyxl to be installed, parses dates through a separate code path whose
+# resolution has already caused one silent failure in this pipeline, and ships 12 MB
+# of binary nobody can diff. The CSV is a verbatim round-trip - same 35,581 rows,
+# same onset dates, same weekly aggregation - and keeps every input in one format.
+CB_PATH = (_find("coxsbazar_dengue_2021_2024.csv")
+           or _find("coxsbazar_dengue_2021_2024.xlsx"))
 cb_rows = []
 if CB_PATH:
     try:
-        _cb = pd.read_excel(CB_PATH)
+        _cb = (pd.read_csv(CB_PATH, low_memory=False) if CB_PATH.lower().endswith(".csv")
+               else pd.read_excel(CB_PATH))
         _onset = pd.to_datetime(_cb["Symptom Onset"], errors="coerce")
         _cbw = (_onset.dropna().dt.to_period("W").dt.start_time
                 .value_counts().sort_index().rename("onset_cases"))

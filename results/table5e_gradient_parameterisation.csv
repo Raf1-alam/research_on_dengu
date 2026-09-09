@@ -1,0 +1,13 @@
+horizon_weeks,method,target_space,coverage_overall,coverage_low_burden,coverage_high_burden,burden_gap,ci_lo,ci_hi,z,p_raw,median_width_cases,p_BH,verdict
+1,Split-conformal CQR,growth,0.868,0.9082,0.8312,0.0771,0.0578,0.0963,7.779,0.0,7.57,0.0,gradient present
+1,Split-conformal CQR,level,0.869,0.9061,0.8229,0.0831,0.0635,0.1027,8.253,0.0,9.14,0.0,gradient present
+1,Group-conditional adaptive conformal,growth,0.8842,0.8827,0.8827,0.0,-0.0186,0.0186,0.0,1.0,8.31,1.0,no detectable gradient
+1,Group-conditional adaptive conformal,level,0.8917,0.9061,0.8805,0.0255,0.0078,0.0433,2.811,0.004932,9.4,0.008455,gradient present
+2,Split-conformal CQR,growth,0.8731,0.9078,0.839,0.0688,0.0498,0.0879,7.034,0.0,9.33,0.0,gradient present
+2,Split-conformal CQR,level,0.8853,0.9117,0.8524,0.0593,0.0408,0.0778,6.249,0.0,13.92,0.0,gradient present
+2,Group-conditional adaptive conformal,growth,0.8874,0.8827,0.8866,-0.0039,-0.0223,0.0145,-0.414,0.678527,10.21,0.740211,no detectable gradient
+2,Group-conditional adaptive conformal,level,0.8963,0.9048,0.8909,0.0139,-0.0036,0.0313,1.554,0.120074,14.27,0.180111,no detectable gradient
+4,Split-conformal CQR,growth,0.8769,0.9152,0.8407,0.0745,0.0557,0.0932,7.73,0.0,12.21,0.0,gradient present
+4,Split-conformal CQR,level,0.8716,0.8939,0.8481,0.0459,0.0266,0.0652,4.652,3e-06,21.37,6e-06,gradient present
+4,Group-conditional adaptive conformal,growth,0.8921,0.8961,0.89,0.0061,-0.0118,0.0239,0.667,0.505071,13.65,0.606085,no detectable gradient
+4,Group-conditional adaptive conformal,level,0.8929,0.884,0.8965,-0.0126,-0.0306,0.0055,-1.365,0.17225,22.3,0.229667,no detectable gradient

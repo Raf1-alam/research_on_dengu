@@ -1,0 +1,10 @@
+lag_weeks_reported_after_onset,n_weeks,pearson_r,spearman_rho,best_lag
+-2,155,0.3678,0.5032,False
+-1,156,0.442,0.5798,False
+0,157,0.5071,0.6564,False
+1,156,0.5521,0.6952,False
+2,155,0.6001,0.7313,False
+3,154,0.6296,0.7586,False
+4,153,0.639,0.7608,False
+5,152,0.6478,0.7836,True
+6,151,0.6344,0.7711,False
