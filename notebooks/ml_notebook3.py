@@ -1870,19 +1870,47 @@ sens_rows = []
 # --- A. Zeros that are probably MISSING REPORTS rather than true zeros -------
 # table1b flags weeks with cases = 0 while patients are still admitted. If those
 # rows drive the headline, the zero-inflation story is an artefact of missingness.
-gap_key = set(map(tuple, PANEL_D.loc[
-    (PANEL_D.cases == 0) & (PANEL_D.get("currently_admitted", 0) > 0),
-    ["unit", "week_start"]].values))
+# Key on integer nanoseconds, not on datetime objects. Under numpy 2.0.2 a
+# np.datetime64 and a pd.Timestamp for the same instant hash DIFFERENTLY, so a
+# (unit, week) tuple built from .values never matched a key built from a DataFrame,
+# _is_gap returned all-False, and this whole sensitivity silently dropped zero rows
+# while reporting "no change". It matched under numpy 2.5 locally and not on Kaggle,
+# which is the worst kind of bug: a robustness check that passes by doing nothing.
+def _wk_ns(weeks):
+    # astype("datetime64[ns]") is not decoration. pd.to_datetime PRESERVES the input
+    # resolution, so the same instant becomes seconds from a datetime64[D] column,
+    # microseconds from a Timestamp Series and nanoseconds from datetime64[ns] - three
+    # different integers for one date. Pinning the unit is what makes the key comparable.
+    return (pd.to_datetime(pd.Series(np.asarray(weeks)).reset_index(drop=True))
+            .astype("datetime64[ns]").astype("int64"))
+
+
+assert "currently_admitted" in PANEL_D.columns, (
+    "the report-gap sensitivity needs currently_admitted; without it the check is "
+    "vacuous and must not be reported as passing")
+_gap_rows = PANEL_D.loc[(PANEL_D.cases == 0) & (PANEL_D["currently_admitted"] > 0),
+                        ["unit", "week_start"]]
+gap_key = set(zip(_gap_rows["unit"].astype(str), _wk_ns(_gap_rows["week_start"])))
 log.info("report-gap weeks flagged: %d", len(gap_key))
+assert gap_key, "no report-gap weeks found - expected 791; the filter is not working"
+
 
 def _is_gap(units, weeks):
-    return np.array([(u, w) in gap_key for u, w in zip(units, weeks)])
+    return np.fromiter(((u, w) in gap_key
+                        for u, w in zip(np.asarray(units).astype(str), _wk_ns(weeks))),
+                       dtype=bool, count=len(units))
 
 for h in [1, 2]:
     P = PRED[h].copy()
     tgt_week = P["week_start"] + pd.to_timedelta(7 * h, unit="D")
     drop = _is_gap(P.unit.values, P.week_start.values) | _is_gap(P.unit.values, tgt_week.values)
     keep = P[~drop]
+    # If gap weeks fall inside this prediction window, removing them must remove
+    # something. Zero means the match failed, not that the data is clean.
+    _in_window = _is_gap(P.unit.values, P.week_start.values).sum()
+    assert not (_in_window > 0 and len(keep) == len(P)), (
+        f"h={h}: {_in_window} report-gap rows are present but none were removed - "
+        "the sensitivity is vacuous and cannot be reported as showing no change")
     for tag, sub in [("all rows", P), ("report-gap rows removed", keep)]:
         base = mean_absolute_error(sub.y, sub.persistence)
         sens_rows.append({
@@ -2300,7 +2328,11 @@ ASSUMPTIONS = pd.DataFrame([
      "three seeds could not resolve a 2.53-point difference against a 5.95-point "
      "seed sd; the paired design blocks on seed and uses this many"),
     ("seed ensemble", str(SEEDS), "design",
-     "single-seed estimates moved by up to 7.6 skill points between runs; every learned "
+     # Interpolated from table12. A hardcoded "7.6" here was right for one local run and
+     # wrong for the canonical one, which spread 11.02 points on the same model.
+     f"single-seed estimates span up to "
+     f"{(STAB.single_seed_max_pct - STAB.single_seed_min_pct).max():.1f} skill points "
+     "on the worst model; every learned "
      "model is the mean over these seeds and table12 reports the member spread"),
     ("nominal coverage", f"{NOMINAL}", "reporting convention", "90% is standard for epidemic forecast hubs"),
     ("significance level", f"{ALPHA}", "convention",
