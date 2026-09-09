@@ -969,24 +969,39 @@ def rolling_origin(M, F, h, test_years=TEST_YEARS, arima_tag=None, with_extras=F
         # out of regime here. This is the standard count model for overdispersed
         # surveillance counts, given the same features as the trees, ridge-penalised
         # because IRLS on 77 correlated predictors does not otherwise converge.
+        # Negative-binomial GLM, the standard count model for overdispersed
+        # surveillance data. Specification matters more than it looks: an earlier
+        # version used log(population) as an OFFSET, which forces cases to be
+        # proportional to population and scored -172%. Conditional on last week's
+        # count that constraint is simply wrong, and letting log-population enter as
+        # a free covariate instead moves the same model to about -9%. Reporting the
+        # offset version would have been a strawman baseline, so this one is given
+        # the specification a statistician would actually choose: log1p on the
+        # autoregressive terms, season, climate, log-population free, dispersion
+        # estimated from a Poisson first pass, and a feature set small enough for
+        # IRLS to converge rather than all 77 collinear columns.
         if with_extras:
           try:
-            # The trees take NaN natively; IRLS does not. 1.3% of feature cells are
-            # missing (season-block starts and the deposit's own lag columns), so the
-            # GLM gets train-median imputation. Without it every fold would throw and
-            # fall back to persistence, and the "baseline" would silently be a copy of
-            # persistence rather than a competing count model.
-            _med = tr[F].median(numeric_only=True)
-            Xtr = tr[F].fillna(_med).fillna(0.0).to_numpy(float)
-            Xte = te[F].fillna(_med).fillna(0.0).to_numpy(float)
-            mu, sd_ = Xtr.mean(0), Xtr.std(0)
-            sd_[sd_ == 0] = 1.0
-            Xtr = np.c_[np.ones(len(Xtr)), (Xtr - mu) / sd_]
-            Xte = np.c_[np.ones(len(Xte)), (Xte - mu) / sd_]
-            _nb = sm.GLM(tr[tl].to_numpy(float), Xtr,
-                         family=sm.families.NegativeBinomial(alpha=1.0))
-            _fit = _nb.fit_regularized(alpha=1e-3, L1_wt=0.0)
-            out["nb_glm"] = np.clip(_fit.predict(Xte), 0, None)
+            _glm_f = [c for c in (["cases_lag1", "cases_lag2", "cases_lag3", "cases_lag4"]
+                                  + G_SEASON + CLIM_BASE + ["population"]) if c in tr.columns]
+            def _glm_design(frame):
+                X = frame[_glm_f].copy()
+                for c in _glm_f:
+                    if c.startswith("cases_lag") or c == "population":
+                        X[c] = np.log1p(X[c].clip(lower=0))
+                X = X.fillna(X.median(numeric_only=True)).fillna(0.0)
+                return sm.add_constant(X, has_constant="add")
+
+            Xg_tr, Xg_te = _glm_design(tr), _glm_design(te)
+            _po = sm.GLM(tr[tl].to_numpy(float), Xg_tr,
+                         family=sm.families.Poisson()).fit()
+            _fv = np.asarray(_po.fittedvalues, float)
+            _alpha = float(np.sum((tr[tl].to_numpy(float) - _fv) ** 2 - _fv) /
+                           max(np.sum(_fv ** 2), 1e-9))
+            _alpha = float(np.clip(_alpha, 1e-3, 10.0))
+            _nb = sm.GLM(tr[tl].to_numpy(float), Xg_tr,
+                         family=sm.families.NegativeBinomial(alpha=_alpha)).fit()
+            out["nb_glm"] = np.clip(np.asarray(_nb.predict(Xg_te), float), 0, None)
           except Exception as e:                    # never let a baseline kill the run
             log.warning("negative-binomial GLM failed at h=%d, %s: %s", h, ty, e)
             out["nb_glm"] = out["persistence"]
@@ -1001,7 +1016,13 @@ def rolling_origin(M, F, h, test_years=TEST_YEARS, arima_tag=None, with_extras=F
 
         frames.append(out)
     P = pd.concat(frames, ignore_index=True)
-    if "nb_glm" in P.columns:
+    if "nb_glm" in P.columns and P["nb_glm"].notna().any():
+        _mp = mean_absolute_error(P.y, P.persistence)
+        _mg = mean_absolute_error(P.y, P.nb_glm)
+        if _mp > 0 and _mg / _mp > 3.0:
+            log.warning("[gate] nb_glm MAE is %.1fx persistence at h=%d - that is a "
+                        "misspecified model, not a finding, and must not be reported "
+                        "as a baseline", _mg / _mp, h)
         _same = float(np.mean(np.isclose(P["nb_glm"].values, P["persistence"].values)))
         if _same > 0.99:
             log.warning("[gate] nb_glm is a copy of persistence in %.0f%% of rows at h=%d - "
@@ -1034,7 +1055,7 @@ MODELS = ["persistence", "snaive", "arima", "ridge_ar4", "nb_glm", "mlp",
 LABELS = {"persistence": "Lag-0 persistence", "snaive": "Seasonal naive",
           "arima": f"ARIMA{ARIMA_ORDER} per district (order from Naher 2022, national monthly)",
           "ridge_ar4": "Log-AR(4) ridge",
-          "nb_glm": "Negative-binomial GLM (ridge-penalised)",
+          "nb_glm": "Negative-binomial GLM (log-pop covariate, estimated dispersion)",
           "mlp": "MLP (64-32, early stopping)",
           "level_L2": "LightGBM level (L2)",
           "level_Poisson": "LightGBM level (Poisson)",
@@ -2454,6 +2475,16 @@ if CB_PATH:
         log.warning("Cox's Bazar cross-check unavailable: %s", e)
 
 CB = pd.DataFrame(cb_rows)
+if not len(CB):
+    # An empty table here means the check did not RUN, not that it ran and found
+    # nothing. On Kaggle that happens when the Cox's Bazar workbook is not attached
+    # to the notebook's dataset, and a blank CSV would otherwise be mistaken for a
+    # completed validation.
+    log.warning("[gate] Cox's Bazar independent validation DID NOT RUN%s. Attach "
+                "coxsbazar_dengue_2021_2024.xlsx to the input dataset; without it "
+                "table18 is empty and the paper has no independent within-country "
+                "check of the surveillance series.",
+                " (file not found)" if not CB_PATH else " (file found but unreadable)")
 if len(CB):
     _best = CB.loc[CB.pearson_r.idxmax()]
     CB["best_lag"] = CB.lag_weeks_reported_after_onset == _best.lag_weeks_reported_after_onset
