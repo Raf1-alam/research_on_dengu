@@ -1,4 +1,6 @@
 covariate,spearman_rho,p_value,n_districts,p_BH,verdict
 log_burden,-0.6043,0.0,64,0.0,associated with coverage
-log_population,-0.164,0.195256,64,0.195256,not associated
-pop_density,-0.3189,0.010218,64,0.015327,associated with coverage
+log_population,-0.164,0.195256,64,0.24407,not associated
+pop_density,-0.3189,0.010218,64,0.01703,associated with coverage
+log_burden | controlling for pop_density,-0.5526,3e-06,64,8e-06,associated with coverage
+pop_density | controlling for log_burden,-0.131,0.306287,64,0.306287,not associated

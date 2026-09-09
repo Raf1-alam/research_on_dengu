@@ -1,31 +1,28 @@
-decision,candidate,inner_valid_MAE,se,selected
-tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 10}",71.7191,1.3795,False
-tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 10}",77.4231,5.1213,False
-tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 10}",78.8006,1.5648,False
-tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 20}",71.8099,4.1876,False
-tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 20}",79.5426,0.6521,False
-tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 20}",78.4437,2.4841,False
-tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 40}",69.68,2.1197,True
-tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 40}",70.6656,1.7676,False
-tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 40}",72.9558,2.2675,False
-tweedie_variance_power,1.1,45.7846,1.1859,False
-tweedie_variance_power,1.3,43.6216,0.4911,True
-tweedie_variance_power,1.5,45.5303,0.1131,False
-tweedie_variance_power,1.7,50.5116,0.2125,False
-tweedie_variance_power,1.9,59.4764,0.1297,False
-growth objective,L1,47.4609,1.507,True
-growth objective,L2,69.68,2.1197,False
-conformal calibration weeks (h=1),26,0.0169,,False
-conformal calibration weeks (h=1),39,0.0084,,True
-conformal calibration weeks (h=1),52,inf,,False
-conformal calibration weeks (h=2),26,0.0522,,False
-conformal calibration weeks (h=2),39,0.0499,,True
-conformal calibration weeks (h=2),52,inf,,False
-conformal calibration weeks (h=4),26,0.9,,True
-conformal calibration weeks (h=4),39,0.9,,False
-conformal calibration weeks (h=4),52,inf,,False
-adaptive conformal step size (gamma),0.005,0.0412,,False
-adaptive conformal step size (gamma),0.01,0.0325,,False
-adaptive conformal step size (gamma),0.02,0.0172,,False
-adaptive conformal step size (gamma),0.05,0.0059,,True
-adaptive conformal step size (gamma),0.1,0.0132,,False
+decision,candidate,inner_valid_MAE,se,selected,coverage_deviation
+tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 10}",71.7191,1.3795,False,
+tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 10}",77.4231,5.1213,False,
+tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 10}",78.8006,1.5648,False,
+tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 20}",71.8099,4.1876,False,
+tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 20}",79.5426,0.6521,False,
+tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 20}",78.4437,2.4841,False,
+tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 40}",69.68,2.1197,True,
+tree hyperparameters,"{'num_leaves': 15, 'min_child_samples': 40}",70.6656,1.7676,False,
+tree hyperparameters,"{'num_leaves': 31, 'min_child_samples': 40}",72.9558,2.2675,False,
+tweedie_variance_power,1.1,45.7846,1.1859,False,
+tweedie_variance_power,1.3,43.6216,0.4911,True,
+tweedie_variance_power,1.5,45.5303,0.1131,False,
+tweedie_variance_power,1.7,50.5116,0.2125,False,
+tweedie_variance_power,1.9,59.4764,0.1297,False,
+growth objective,L1,47.4609,1.507,True,
+growth objective,L2,69.68,2.1197,False,
+conformal calibration weeks (h=1),26,,,False,0.0169
+conformal calibration weeks (h=1),39,,,True,0.0084
+conformal calibration weeks (h=2),26,,,False,0.0522
+conformal calibration weeks (h=2),39,,,True,0.0499
+conformal calibration weeks (h=4),26,,,False,0.1276
+conformal calibration weeks (h=4),39,,,True,0.0862
+adaptive conformal step size (gamma),0.005,0.0412,,False,
+adaptive conformal step size (gamma),0.01,0.0325,,False,
+adaptive conformal step size (gamma),0.02,0.0172,,False,
+adaptive conformal step size (gamma),0.05,0.0059,,True,
+adaptive conformal step size (gamma),0.1,0.0132,,False,

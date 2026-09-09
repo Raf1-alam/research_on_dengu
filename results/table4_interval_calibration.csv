@@ -12,8 +12,8 @@ horizon_weeks,method,key,nominal,empirical_coverage,median_width_cases,mean_widt
 2,Adaptive conformal (ACI),adaptive,0.9,0.8893,10.11,44.08,5.357,-1.888,0.0636,64,0.0763,indistinguishable from 0.90
 2,Group-conditional adaptive conformal,mondrian_adaptive,0.9,0.8874,10.21,48.25,5.373,-2.558,0.013,64,0.0167,differs from 0.90 (BH q<0.05)
 4,Empirical growth quantiles (no model),empirical,0.9,0.9052,27.37,339.33,18.594,1.184,0.241,64,0.241,indistinguishable from 0.90
-4,Quantile LightGBM (uncalibrated),raw,0.9,0.8342,11.81,51.5,9.399,-6.914,0.0,64,0.0,differs from 0.90 (BH q<0.05)
-4,Split-conformal CQR,split,0.9,0.8682,12.47,54.53,9.363,-4.087,0.0001,64,0.0002,differs from 0.90 (BH q<0.05)
-4,Group-conditional conformal (Mondrian),mondrian,0.9,0.8646,12.92,60.4,9.325,-5.357,0.0,64,0.0,differs from 0.90 (BH q<0.05)
-4,Adaptive conformal (ACI),adaptive,0.9,0.8918,14.66,65.17,9.463,-1.226,0.2247,64,0.2379,indistinguishable from 0.90
-4,Group-conditional adaptive conformal,mondrian_adaptive,0.9,0.892,14.42,74.57,9.545,-1.399,0.1667,64,0.1875,indistinguishable from 0.90
+4,Quantile LightGBM (uncalibrated),raw,0.9,0.8382,10.61,50.37,8.888,-7.342,0.0,64,0.0,differs from 0.90 (BH q<0.05)
+4,Split-conformal CQR,split,0.9,0.8769,12.21,57.81,8.855,-3.208,0.0021,64,0.0034,differs from 0.90 (BH q<0.05)
+4,Group-conditional conformal (Mondrian),mondrian,0.9,0.8799,12.66,68.72,8.919,-3.41,0.0011,64,0.002,differs from 0.90 (BH q<0.05)
+4,Adaptive conformal (ACI),adaptive,0.9,0.8921,13.57,66.53,8.974,-1.215,0.2288,64,0.241,indistinguishable from 0.90
+4,Group-conditional adaptive conformal,mondrian_adaptive,0.9,0.8921,13.65,78.26,9.153,-1.392,0.1687,64,0.1898,indistinguishable from 0.90

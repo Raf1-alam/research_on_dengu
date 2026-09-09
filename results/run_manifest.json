@@ -1,6 +1,12 @@
 {
-  "generated_utc": "2026-09-06T14:59:08+00:00",
+  "generated_utc": "2026-09-09T09:41:06+00:00",
   "seed": 42,
+  "seed_ensemble": [
+    42,
+    7,
+    1
+  ],
+  "paired_comparison_seeds": 20,
   "test_years": [
     2024,
     2025
@@ -11,6 +17,14 @@
     3,
     4
   ],
+  "alarm": {
+    "quantile": 0.8,
+    "min_cases": 5,
+    "threshold_window": [
+      2022,
+      2023
+    ]
+  },
   "versions": {
     "python": "3.12.13",
     "pandas": "2.3.3",
@@ -21,7 +35,7 @@
   "calibration_weeks": {
     "1": 39,
     "2": 39,
-    "4": 26
+    "4": 39
   },
   "alpha": 0.05,
   "selected_hyperparameters": {
@@ -64,6 +78,20 @@
     "week_start",
     "year"
   ],
+  "inputs": {
+    "datasets/abdullahomarsayeem/dengue-dataset-bangladesh/district_week_panel.csv": {
+      "sha256": "88a1eb9feb4b982706850f661bbfd81080035515ff634764cd022c5a1598330a",
+      "bytes": 6130812
+    },
+    "datasets/abdullahomarsayeem/dengue-dataset-bangladesh/divisional_daily_2022_2025.csv": {
+      "sha256": "0846b1b94df20dd91439a8fd1021b5aab498f0e9a2ce60cca2704af13f0eab84",
+      "bytes": 423161
+    },
+    "datasets/abdullahomarsayeem/dengue-dataset-bangladesh/nasa_power_divisions_daily.csv": {
+      "sha256": "31b97c51c194db5f7665b03becd153d98aa693622cba3d546b0cdfff1ead603f",
+      "bytes": 664417
+    }
+  },
   "tables": {
     "table1_reconciliation": {
       "rows": 10,
@@ -81,7 +109,7 @@
       "path": "/kaggle/working/results/table1c_external_cross_checks.csv"
     },
     "table1d_model_selection": {
-      "rows": 30,
+      "rows": 27,
       "caption": "Every tuned constant, chosen on train<=2022 / validate 2023; metric is inner-validation MAE except the calibration window (|coverage-nominal|)",
       "path": "/kaggle/working/results/table1d_model_selection.csv"
     },
@@ -116,8 +144,8 @@
       "path": "/kaggle/working/results/table5c_spread_reduction.csv"
     },
     "table5d_coverage_covariates": {
-      "rows": 3,
-      "caption": "Per-district coverage under split conformal against burden and the size covariates burden might be proxying for",
+      "rows": 5,
+      "caption": "Per-district coverage under split conformal against burden and the size covariates burden might be proxying for. The last two rows are partial correlations: burden controlling for density, and density controlling for burden. Only the one that survives its control can be called the mechanism",
       "path": "/kaggle/working/results/table5d_coverage_covariates.csv"
     },
     "table6_optimism_gap": {
@@ -125,13 +153,18 @@
       "caption": "2x2 space-time validation matrix",
       "path": "/kaggle/working/results/table6_optimism_gap.csv"
     },
+    "table6b_alarm_threshold_sensitivity": {
+      "rows": 8,
+      "caption": "Optimism gap re-measured across outbreak quantiles (floor held at 5) and across floors (quantile held at 0.8). districts_at_floor says how many of the 64 use the floor rather than their own quantile - at low quantiles that is most of them, so those rows are not pure quantile thresholds",
+      "path": "/kaggle/working/results/table6b_alarm_threshold_sensitivity.csv"
+    },
     "table7a_alarm_performance": {
       "rows": 8,
       "caption": "Alarm performance at fixed public-health sensitivity",
       "path": "/kaggle/working/results/table7a_alarm_performance.csv"
     },
     "table7b_alarm_lead_time": {
-      "rows": 97,
+      "rows": 89,
       "caption": "Weeks of warning before outbreak onset and before peak, h=2, sensitivity 0.80",
       "path": "/kaggle/working/results/table7b_alarm_lead_time.csv"
     },
@@ -162,7 +195,7 @@
     },
     "table11_data_quality_sensitivity": {
       "rows": 16,
-      "caption": "Do the two audit defects change the conclusions? A: missing-report zeros. B: CHIRPS-vs-POWER rainfall mismatch",
+      "caption": "Do the two audit defects change the conclusions? A: missing-report zeros. B: CHIRPS-vs-POWER rainfall mismatch. Read `anchored`/`level_Tweedie` in the units given by `metric`",
       "path": "/kaggle/working/results/table11_data_quality_sensitivity.csv"
     },
     "table12_seed_stability": {
@@ -181,7 +214,7 @@
       "path": "/kaggle/working/results/table10_forward_test_2026.csv"
     },
     "table0_assumptions_register": {
-      "rows": 24,
+      "rows": 25,
       "caption": "Every constant, and whether it was selected empirically or assumed",
       "path": "/kaggle/working/results/table0_assumptions_register.csv"
     }

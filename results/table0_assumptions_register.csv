@@ -5,18 +5,19 @@ selection split,"train<=2022, validate 2023",design,no test year participates in
 tree hyperparameters,"{'num_leaves': 7, 'min_child_samples': 40}",SELECTED,"inner-validation MAE sweep, Cell 4b / table1d"
 tweedie_variance_power,1.3,SELECTED,inner-validation MAE sweep over 1.1-1.9
 growth objective,L1,SELECTED,"inner-validation MAE, L1 vs L2"
-conformal calibration weeks,"{1: 39, 2: 39, 4: 26}",SELECTED,"inner-validation |coverage - nominal| over 26/39/52, averaged across seeds and chosen per horizon; floored at 26 because the quantile is estimated from independent weeks"
+conformal calibration weeks,"{1: 39, 2: 39, 4: 39}",SELECTED,"inner-validation |coverage - nominal| over 26/39/52, averaged across seeds and chosen per horizon; floored at 26 because the quantile is estimated from independent weeks"
 adaptive conformal gamma,0.05,SELECTED,inner-validation |coverage - nominal| over 0.005-0.10
 interval method reported,group-conditional adaptive conformal,empirical,marginal coverage of a single shared correction was ~0.90 in low-burden districts and ~0.83 in high-burden ones; calibrating within burden tertiles closes that gap
 ARIMA order,"(2, 1, 2)","from the literature, OUT OF REGIME","Naher et al. (2022) selected ARIMA(2,1,2) on national MONTHLY counts. Applied here to district-week counts that are 47% zeros it is outside its design regime and loses to persistence. Evidence that the published benchmark does not transfer to operational resolution - NOT evidence that our model beats ARIMA, since the order was not re-selected for this data"
 paired-comparison seeds,20,power analysis,three seeds could not resolve a 2.53-point difference against a 5.95-point seed sd; the paired design blocks on seed and uses this many
-seed ensemble,"[42, 7, 1]",design,single-seed estimates moved by up to 7.6 skill points between runs; every learned model is the mean over these seeds and table12 reports the member spread
+seed ensemble,"[42, 7, 1]",design,single-seed estimates span up to 11.0 skill points on the worst model; every learned model is the mean over these seeds and table12 reports the member spread
 nominal coverage,0.9,reporting convention,90% is standard for epidemic forecast hubs
 significance level,0.05,convention,0.05 two-sided; every family of tests is Benjamini-Hochberg corrected
-alarm quantile,0.8,assumption,per-unit 80th percentile of training-year cases; base rate 0.179. Sensitivity across 0.70/0.75/0.80/0.85 is not run - state as a limitation
-alarm minimum cases,5,assumption,floor so that near-zero districts cannot alarm on a single case
-case lags,"[1,2,3,4,8] weeks",assumption,covers the intrinsic + extrinsic incubation cycle; not swept
-climate lags,"[2,3,4] weeks",assumption,vector-development lag from the entomological literature; not swept
+alarm quantile,0.8,"assumption, SENSITIVITY TESTED",per-unit 80th percentile of training-year cases; base rate 0.141. Cell 9b re-measures the optimism gap at 0.70/0.75/0.80/0.85 - see table6b_alarm_threshold_sensitivity.csv
+alarm threshold basis,"[2022, 2023]",empirical,"the per-district quantile is taken over the modelling window only. Including the 2019 partial season (~30% of that year) shifted every per-district threshold and with it the reported optimism gap: this run gives 0.0942 ROC against 0.0776 in the last run made on the old basis (committed results/table6, base rate 0.179 there against 0.141 here). A sensitivity sweep that cannot reproduce the number it perturbs is measuring something else, and the gate in Cell 9b now checks that it does"
+alarm minimum cases,5,"assumption, SENSITIVITY TESTED","floor so near-zero districts cannot alarm on a single case. It binds for 7 of 64 districts at q=0.8 and 19 at q=0.7, so it is not a formality; table6b sweeps it over 1/3/5/10 and the gap is largest with no floor at all"
+case lags,"[1,2,3,4,8] weeks","design, a priori","spans the intrinsic (4-7d) plus extrinsic (8-12d) incubation cycle and two transmission generations. Fixed from the entomology before any result was seen and never swept, so it cannot be a source of optimism - but it is also not optimised, and a tuned lag set would likely score higher"
+climate lags,"[2,3,4] weeks","design, a priori","egg-to-adult development plus the extrinsic incubation period, the standard 2-4 week window in the vector literature. Fixed a priori, same reasoning as the case lags. table8b leaves each climate variable out in turn; the lag STRUCTURE itself is not swept and that remains a stated limitation"
 modelling window,year >= 2022,empirical,"2019 covers only 30% of its season (30,257 of 101,354 official) and 2020-21 are absent"
 reconciliation tolerance,"{'district': 1.0, 'divisional': 2.5}",POST-HOC,the divisional bound was widened to 2.5% after observing a -1.85% gap in 2022; this is a post-hoc choice and is reported as such
 burden tertiles,3 equal-count groups,descriptive,cut on training-year mean cases only

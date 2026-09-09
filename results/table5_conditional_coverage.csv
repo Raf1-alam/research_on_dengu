@@ -29,18 +29,18 @@ horizon_weeks,method,burden_tertile,n_unit_weeks,coverage,median_width_cases
 2,Group-conditional adaptive conformal,low burden,2310,0.8827,3.09
 2,Group-conditional adaptive conformal,mid burden,2100,0.8933,8.93
 2,Group-conditional adaptive conformal,high burden,2310,0.8866,35.79
-4,Quantile LightGBM (uncalibrated),low burden,2310,0.8797,4.61
-4,Quantile LightGBM (uncalibrated),mid burden,2100,0.8219,11.12
-4,Quantile LightGBM (uncalibrated),high burden,2310,0.8,34.26
-4,Split-conformal CQR,low burden,2310,0.9082,4.91
-4,Split-conformal CQR,mid burden,2100,0.8652,11.68
-4,Split-conformal CQR,high burden,2310,0.8307,36.38
-4,Group-conditional conformal (Mondrian),low burden,2310,0.8537,4.61
-4,Group-conditional conformal (Mondrian),mid burden,2100,0.8776,12.24
-4,Group-conditional conformal (Mondrian),high burden,2310,0.8636,41.99
-4,Adaptive conformal (ACI),low burden,2310,0.9286,5.67
-4,Adaptive conformal (ACI),mid burden,2100,0.8886,13.83
-4,Adaptive conformal (ACI),high burden,2310,0.858,43.57
-4,Group-conditional adaptive conformal,low burden,2310,0.8918,5.03
-4,Group-conditional adaptive conformal,mid burden,2100,0.8943,13.9
-4,Group-conditional adaptive conformal,high burden,2310,0.89,53.71
+4,Quantile LightGBM (uncalibrated),low burden,2310,0.884,4.07
+4,Quantile LightGBM (uncalibrated),mid burden,2100,0.8314,9.45
+4,Quantile LightGBM (uncalibrated),high burden,2310,0.7987,29.9
+4,Split-conformal CQR,low burden,2310,0.9152,4.46
+4,Split-conformal CQR,mid burden,2100,0.8748,11.06
+4,Split-conformal CQR,high burden,2310,0.8407,34.91
+4,Group-conditional conformal (Mondrian),low burden,2310,0.8857,4.08
+4,Group-conditional conformal (Mondrian),mid burden,2100,0.871,10.78
+4,Group-conditional conformal (Mondrian),high burden,2310,0.8823,45.21
+4,Adaptive conformal (ACI),low burden,2310,0.9264,4.87
+4,Adaptive conformal (ACI),mid burden,2100,0.8919,12.22
+4,Adaptive conformal (ACI),high burden,2310,0.858,37.97
+4,Group-conditional adaptive conformal,low burden,2310,0.8961,4.23
+4,Group-conditional adaptive conformal,mid burden,2100,0.89,12.31
+4,Group-conditional adaptive conformal,high burden,2310,0.89,50.99

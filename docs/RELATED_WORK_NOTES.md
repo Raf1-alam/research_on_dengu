@@ -5,6 +5,88 @@ methodological detail that bears on this study. **The PDFs are deliberately not
 committed** — the set mixes CC-BY and subscription titles, and redistributing the
 latter from a public repository is a licensing problem. Retrieve them by DOI.
 
+## Added 9 Sep 2026 — two Bangladesh papers that change what we may claim
+
+Found while checking data sources. Both are 2026, both are Bangladesh, and neither was
+in this file. **Read both before writing the introduction.**
+
+### Fuad, Milki & Aziz (2026) · *PLoS ONE* 21(8):e0353069 · [10.1371/journal.pone.0353069](https://doi.org/10.1371/journal.pone.0353069)
+
+*Tactical vs. strategic: an adaptable framework for horizon-dependent dengue forecasting
+using data-driven approaches with serotype and climate covariates in Bangladesh.*
+
+**This is the closest paper to our horizon-dependence claim and it was published first.**
+11 districts, monthly, Jan 2017 – Dec 2023, 924 observations, horizons 1–6 months,
+chronological train/validation/purge/test split with the test window Sep 2022 – Dec 2023.
+Their conclusion: *"Model ranking changed with horizon, epidemic regime, district
+contribution and whether the task was magnitude forecasting or alerting."* SARIMAX wins
+one-step alerting (ROC-AUC 0.950); Prophet wins pooled magnitude at h=2–6.
+
+**We cannot present "the best model depends on the horizon" as new.** What remains ours:
+they compare *model families*, we test one *target parameterisation* against another with
+seed as a blocking factor across 20 paired fits, giving an effect size and interval
+(h=1 +5.13, dz=3.53; h=3 −4.42, dz=−1.50) rather than a ranking. Different claim, and it
+must be worded as such, with this paper cited at the point we make it.
+
+**Their calibration result is a gift to our motivation.** Only their TFT produces
+intervals, at nominal 80%. Reported coverage is 0.17–0.24 in normal periods and
+**exactly zero during outbreak periods** — *"none of the observed outbreak counts fell
+within those intervals."* They document the failure and do not repair it. No conformal
+prediction, no bootstrap intervals, no coverage conditional on any subgroup.
+
+That is the strongest possible setup for our contribution: a published Bangladesh
+district forecasting paper whose intervals collapse exactly when a forecast would be
+used. Our group-conditional adaptive conformal reaches 0.884–0.892 against nominal 0.90
+and removes the burden gradient. Cite this as the motivating failure, not as a rival.
+
+### Shiddik, Toshi, Yesmin & Rahman (2026) · *Trop Med Infect Dis* 11(3):73 · [10.3390/tropicalmed11030073](https://doi.org/10.3390/tropicalmed11030073)
+
+*District-level dengue early warning prediction system in Bangladesh using hybrid
+explainable AI and Bayesian deep learning.*
+
+All 64 districts, 2017–2024, DGHS + NASA + World Bank + BBS — the same sources we use.
+Yearly split 2017–2023/2024 and monthly Jan 2022–Dec 2023/2024. Binary outbreak
+classification against a mean-case threshold. MLP yearly **ROC-AUC 0.99**, ConvLSTM
+monthly ROC-AUC 0.81; BYM2_RW2 with lagged effects, DIC 3671.055; humidity SHAP 0.314,
+rainfall RR 1.303.
+
+**Temporal holdout only. No spatial blocking, no prediction intervals, no coverage, no
+conformal prediction.** Their own limitation section concedes validation rested
+*"primarily on train–test splits within the same country"*.
+
+**This is the empirical anchor for our optimism gap.** A yearly ROC-AUC of 0.99 across
+64 districts is precisely the regime our C1 measures (0.9858). Adding both spatial and
+temporal blocking costs 0.094 ROC and 0.475 PR. We can now say concretely: the published
+district-level Bangladesh early-warning AUCs are obtained without spatial blocking, and
+here is what that omission is worth. Argue it from our own matrix — do not assert their
+number would fall, since we have not re-run their model.
+
+**Housekeeping.** This is the "Shiddik" the legacy audit in
+`unused/legacy_docs/comprehensive_findings_audit_and_shiddik_comparison.md` benchmarked
+against under a different title. That legacy document also contains the withdrawn
+clinical figures. Note for the supervisor: several withdrawn README claims (a BYM2 model
+never fitted, humidity RR 1.313, a DIC reduction) sit close to this paper's published
+BYM2 / RR 1.303 / DIC results. Whatever the origin, nothing resembling those numbers may
+re-enter the manuscript except as a citation to this paper.
+
+### Supporting, lower priority
+
+| Paper | DOI | Why it matters |
+|---|---|---|
+| Faruk (2026), *Health Sci Rep* 9(4):e72207 | [10.1002/hsr2.72207](https://doi.org/10.1002/hsr2.72207) | Monthly national 2010–2024; ML models "showed significant test overfitting", SARIMAX generalised best. Independent support for our optimism argument. |
+| Chowdhury (2026), *Health Sci Rep* 9(3):e72147 | [10.1002/hsr2.72147](https://doi.org/10.1002/hsr2.72147) | Monthly national 2000–2023, ARIMA vs XGBoost; useful only for long-run context. |
+| Liu, Hossain & Hossain (2025), *Sci Rep* 15:35931 | [10.1038/s41598-025-19752-7](https://doi.org/10.1038/s41598-025-19752-7) | 5 divisions, monthly 2022–2023, XGBoost best. Coarser than us on every axis. |
+| Bhuiyan et al. (2025), *J Trop Med* 2025:1709439 | [10.1155/jotm/1709439](https://doi.org/10.1155/jotm/1709439) | Symptom-based clinical classification, n=500, ANN 97.5%. Same genre as the clinical arm we dropped; cite if reviewers ask why we dropped it. |
+
+**Resolution standing after these additions.** Shiddik is 64 districts yearly/monthly;
+Fuad is 11 districts monthly; Liu is 5 divisions monthly. We are 64 districts **weekly**,
+which is the finest spatio-temporal resolution in this literature and is defensible as
+stated.
+
+**Sources consulted 9 Sep 2026 via PubMed.**
+
+---
+
 ## The closest prior work — read this before writing Section II
 
 ### Assessing dengue forecasting methods, Rio de Janeiro (2025) · [PMC11984044](https://pmc.ncbi.nlm.nih.gov/articles/PMC11984044/)
