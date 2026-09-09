@@ -23,3 +23,7 @@ scratch/
 # Large raw inputs are tracked deliberately: this project has a history of
 # unreproducible claims, so the repo is kept self-contained.
 !data/raw/**
+
+# Local run output. The committed results/ and figures/ are the canonical run;
+# a local run writes here instead so it cannot silently overwrite them.
+artifacts/

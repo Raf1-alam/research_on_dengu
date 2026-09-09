@@ -24,7 +24,7 @@
 # =============================================================================
 # CELL 0 — Environment, reproducibility, paths
 # =============================================================================
-import os, sys, glob, json, random, logging, warnings
+import os, sys, glob, json, random, hashlib, logging, warnings
 from datetime import datetime, timezone
 
 import numpy as np
@@ -121,17 +121,39 @@ def save_table(name, df, caption=""):
 # `unit`  = the modelling unit (district, or division at coarse resolution)
 # `block` = the spatial holdout group (division at both resolutions)
 
+_INPUTS = {}          # every input file this run actually opened, with its hash
+
+
+def _record_input(path):
+    """Hash a resolved input so the manifest pins the data, not just the code.
+
+    _find is the only way an input enters the pipeline, so recording here catches
+    every file without relying on anyone remembering to declare it. Two runs whose
+    manifests differ here were not run on the same data, whatever else matches.
+    """
+    try:
+        h = hashlib.sha256()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                h.update(chunk)
+        _INPUTS[os.path.relpath(path, BASE_INPUT).replace("\\", "/")] = {
+            "sha256": h.hexdigest(), "bytes": os.path.getsize(path)}
+    except OSError as e:                       # never let bookkeeping kill a run
+        log.warning("could not hash input %s: %s", path, e)
+    return path
+
+
 def _find(*names, root=BASE_INPUT):
     """Locate the first matching file anywhere under root (case-insensitive)."""
     for n in names:
         hits = glob.glob(os.path.join(root, "**", n), recursive=True)
         if hits:
-            return sorted(hits)[0]
+            return _record_input(sorted(hits)[0])
     low = {n.lower() for n in names}
     for r, _, fs in os.walk(root):
         for f in fs:
             if f.lower() in low:
-                return os.path.join(r, f)
+                return _record_input(os.path.join(r, f))
     return None
 
 
@@ -448,7 +470,7 @@ def engineer(panel):
     return df
 
 
-def add_alarm_labels(M, quantile=None):
+def add_alarm_labels(M, quantile=None, floor=None):
     """Attach the outbreak threshold and alarm labels to a MODELLING frame.
 
     Deliberately not done inside engineer(). The threshold has to be computed over
@@ -460,9 +482,15 @@ def add_alarm_labels(M, quantile=None):
     """
     M = M.copy()
     q = quantile if quantile is not None else ALARM_QUANTILE
+    fl = ALARM_MIN_CASES if floor is None else floor
     base = M[(M.year >= ALARM_BASE_MIN) & (M.year <= ALARM_TRAIN_MAX)]
     thr_map = base.groupby("unit")["cases"].quantile(q)
-    thr = np.maximum(M["unit"].map(thr_map).fillna(ALARM_MIN_CASES), ALARM_MIN_CASES)
+    # How often does the floor override the quantile? At low quantiles many quiet
+    # districts sit below it, so a "q = 0.70" threshold is partly a floor of 5 and
+    # the sweep row must say so rather than be read as a pure quantile.
+    M.attrs["n_floored"] = int((thr_map < fl).sum())
+    M.attrs["n_units"] = int(thr_map.shape[0])
+    thr = np.maximum(M["unit"].map(thr_map).fillna(fl), fl)
     M["alarm_threshold"] = thr
     for h in HORIZONS:
         lead = M[f"target_lead_{h}w"]
@@ -666,8 +694,16 @@ log.info("selected growth objective: %s", GROWTH_OBJ_NAME)
 
 # (d) conformal calibration window, scored by |coverage - nominal| on the inner split
 def _cal_score(cw, h=2, seed=None):
+    # _tr and _va are masked on target_lead_2w, so at h=4 they still carry rows whose
+    # 4-week targets are NaN (season blocking ends each block early). Those NaNs reached
+    # np.quantile, made the conformal quantile NaN, and every interval comparison then
+    # evaluated False - coverage 0.0, score |0 - 0.9| = 0.9 for BOTH candidate windows,
+    # so the h=4 window was being picked by min() breaking a tie between two failures.
     tg, tl = f"target_growth_{h}w", f"target_lead_{h}w"
-    tra = _tr.sort_values("week_start")
+    tra = _tr[_tr[tg].notna() & _tr[tl].notna()].sort_values("week_start")
+    val = _va[_va[tg].notna() & _va[tl].notna()]
+    if len(val) < 100:
+        return np.inf
     wk = np.sort(tra["week_start"].unique())
     if len(wk) <= cw + 4:
         return np.inf
@@ -684,12 +720,14 @@ def _cal_score(cw, h=2, seed=None):
     cw_ = np.maximum(ch - cl, _wf)
     sc = np.maximum(cl - cal[tg].values, cal[tg].values - ch) / cw_
     n = len(sc); qh = np.quantile(sc, min(1.0, np.ceil((n + 1) * NOMINAL) / n))
-    anc = _va["cases_lag0"].values + 1.0
-    vl, vh = q[0.05].predict(_va[FSEL]), q[0.95].predict(_va[FSEL])
+    if not np.isfinite(qh):
+        return np.inf                      # unusable, and must not look like a good score
+    anc = val["cases_lag0"].values + 1.0
+    vl, vh = q[0.05].predict(val[FSEL]), q[0.95].predict(val[FSEL])
     vw = np.maximum(vh - vl, _wf)
     lo = anc * np.exp(vl - qh * vw) - 1
     hi = anc * np.exp(vh + qh * vw) - 1
-    y = _va[tl].values
+    y = val[tl].values
     return abs(((y >= np.clip(lo, 0, None)) & (y <= hi)).mean() - NOMINAL)
 
 # Selected PER HORIZON: the score is |coverage - nominal|, and a 1-week-ahead
@@ -702,10 +740,20 @@ for _h in [1, 2, 4]:
     # Candidates are floored at 26 weeks and capped so the training half stays larger.
     _sc = {cw: float(np.mean([_cal_score(cw, h=_h, seed=sd) for sd in SEEDS]))
            for cw in [26, 39, 52]}
+    _sc = {cw: v for cw, v in _sc.items() if np.isfinite(v)}   # drop infeasible windows
+    assert _sc, f"no feasible calibration window at h={_h}"
+    # A selection between two identical scores is not a selection. This fired at h=4,
+    # where both candidates scored exactly 0.9 because neither produced usable intervals.
+    if len(_sc) > 1 and len(set(np.round(list(_sc.values()), 6))) == 1:
+        raise AssertionError(
+            f"every calibration window scores identically at h={_h} ({_sc}) - the "
+            "selection is arbitrary and the resulting intervals cannot be reported")
     CAL_WEEKS_BY_H[_h] = min(_sc, key=_sc.get)
     sel_rows += [{"decision": f"conformal calibration weeks (h={_h})", "candidate": str(cw),
-                  "inner_valid_MAE": round(v, 4), "se": np.nan,
+                  "inner_valid_MAE": np.nan, "coverage_deviation": round(v, 4),
+                  "se": np.nan,
                   "selected": cw == CAL_WEEKS_BY_H[_h]} for cw, v in _sc.items()]
+    log.info("  h=%d calibration windows scored: %s", _h, sorted(_sc))
 CAL_WEEKS = CAL_WEEKS_BY_H[2]
 log.info("selected conformal calibration window per horizon: %s", CAL_WEEKS_BY_H)
 
@@ -1248,8 +1296,15 @@ print(calib.pivot_table(index="horizon_weeks", columns="key",
 # =============================================================================
 # CELL 8 — Conditional coverage by district burden. Marginal coverage hides this.
 # =============================================================================
-burden = MD[MD.year <= ALARM_TRAIN_MAX].groupby("unit")["cases"].mean()
-tert = pd.qcut(burden, 3, labels=["low burden", "mid burden", "high burden"])
+# Reuse BURDEN_G rather than re-deriving the tertiles. The two definitions differed by
+# one year of history and moved 2 of 64 districts across a boundary, which meant this
+# table was scoring the group-conditional method against groups it was not calibrated
+# on. Small, but it is the paper's lead result and it has to be the same grouping.
+_TERT_NAME = {0: "low burden", 1: "mid burden", 2: "high burden"}
+_order = ["low burden", "mid burden", "high burden"]
+tert = pd.Series({u: _TERT_NAME[g] for u, g in BURDEN_G.items()}, name="tertile").astype(
+    pd.CategoricalDtype(_order, ordered=True))   # keep table rows in burden order
+assert set(tert.index) >= set(MD["unit"].unique()), "a modelled district has no burden group"
 
 rows = []
 for h in [1, 2, 4]:
@@ -1350,11 +1405,20 @@ print(SPR.to_string(index=False))
 I2 = INTERVALS[(2, "split")].copy()
 I2["_c"] = ((I2.y >= I2.lo) & (I2.y <= I2.hi)).astype(float)
 per_unit = I2.groupby("unit")["_c"].mean().rename("coverage").reset_index()
-cov_src = MD[MD.year <= ALARM_TRAIN_MAX].groupby("unit").agg(
+# No silent fallback here. Substituting a row count for a missing population column
+# would still produce a plausible correlation, labelled "population", and the claim
+# that district size is ruled out would rest on a variable that is not population.
+_need = ["population", "pop_density"]
+_miss = [c for c in _need if c not in MD.columns]
+assert not _miss, (f"confound regression needs {_miss}, which the panel does not carry - "
+                   "without them the size explanation cannot be tested and must not be "
+                   "reported as ruled out")
+cov_src = MD[(MD.year >= ALARM_BASE_MIN) & (MD.year <= ALARM_TRAIN_MAX)].groupby("unit").agg(
     burden=("cases", "mean"),
-    population=("population", "first") if "population" in MD.columns else ("cases", "size"),
-    pop_density=("pop_density", "first") if "pop_density" in MD.columns else ("cases", "size"),
+    population=("population", "first"),
+    pop_density=("pop_density", "first"),
 ).reset_index()
+assert cov_src["population"].nunique() > 1, "population is constant across districts"
 reg = per_unit.merge(cov_src, on="unit")
 reg["log_burden"] = np.log1p(reg["burden"])
 reg["log_population"] = np.log1p(reg["population"])
@@ -1365,6 +1429,37 @@ for v in ["log_burden", "log_population", "pop_density"]:
     r, pv = stats.spearmanr(reg[v], reg["coverage"])
     rows.append({"covariate": v, "spearman_rho": round(float(r), 4),
                  "p_value": round(float(pv), 6), "n_districts": len(reg)})
+# Marginal correlations cannot separate burden from its correlates. Population COUNT
+# is not associated, but population DENSITY is, and density is itself a burden
+# correlate - so "coverage degrades with burden, not with district size" is only
+# supportable if burden survives controlling for density. Partial Spearman does that:
+# rank-transform, residualise each variable on the control by OLS, correlate the
+# residuals. Reported for both directions so neither is privileged.
+def _partial_spearman(df, x, y, ctrl):
+    r = df[[x, y, ctrl]].rank()
+    c = np.c_[np.ones(len(r)), r[ctrl].values]
+    res = {}
+    for v in (x, y):
+        beta, *_ = np.linalg.lstsq(c, r[v].values, rcond=None)
+        res[v] = r[v].values - c @ beta
+    rho = float(stats.pearsonr(res[x], res[y])[0])
+    # pearsonr's own p-value assumes df = n - 2, but one df went on the control, so the
+    # test is df = n - 2 - k with k = 1. At n = 64 that is 61 rather than 62 - small, but
+    # this is a number that goes in a paper, so it should be the right test.
+    dof = len(r) - 2 - 1
+    if dof <= 0 or abs(rho) >= 1:
+        return rho, np.nan
+    t = rho * np.sqrt(dof / (1 - rho ** 2))
+    return rho, float(2 * stats.t.sf(abs(t), dof))
+
+
+for _v, _c in [("log_burden", "pop_density"), ("pop_density", "log_burden")]:
+    if reg[_v].nunique() < 3 or reg[_c].nunique() < 3:
+        continue
+    _r, _p = _partial_spearman(reg, _v, "coverage", _c)
+    rows.append({"covariate": f"{_v} | controlling for {_c}", "spearman_rho": round(_r, 4),
+                 "p_value": round(_p, 6), "n_districts": len(reg)})
+
 BURD = pd.DataFrame(rows)
 if len(BURD):
     _rej, _adj = bh_fdr(BURD["p_value"].values, q=ALPHA)
@@ -1372,7 +1467,9 @@ if len(BURD):
     BURD["verdict"] = np.where(_rej, "associated with coverage", "not associated")
 save_table("table5d_coverage_covariates", BURD,
            "Per-district coverage under split conformal against burden and the size "
-           "covariates burden might be proxying for")
+           "covariates burden might be proxying for. The last two rows are partial "
+           "correlations: burden controlling for density, and density controlling for "
+           "burden. Only the one that survives its control can be called the mechanism")
 print(BURD.to_string(index=False))
 
 
@@ -1432,6 +1529,7 @@ gap_rows = []
 
 for _q in ALARM_Q_SWEEP:
     _Mq = add_alarm_labels(MD, quantile=_q)          # one definition, shared with the matrix
+    _nfl = _Mq.attrs.get("n_floored", 0)
     _lab = _Mq[f"target_alarm_{H_ALARM}w"]
     Aq = _Mq.loc[_lab.notna()].copy()
     Aq["_y"] = _lab.loc[_lab.notna()].astype(int).values
@@ -1459,8 +1557,9 @@ for _q in ALARM_Q_SWEEP:
               if Aq[(Aq.year == ty) & (Aq.block == b)]["_y"].nunique() > 1])
 
     gap_rows.append({
-        "alarm_quantile": _q, "base_rate": round(float(Aq["_y"].mean()), 4),
-        "n_rows": len(Aq),
+        "alarm_quantile": _q, "alarm_floor": ALARM_MIN_CASES,
+        "base_rate": round(float(Aq["_y"].mean()), 4),
+        "districts_at_floor": _nfl, "n_rows": len(Aq),
         "C1_ROC": round(q1[0], 4), "C2_ROC": round(q2[0], 4),
         "C3_ROC": round(q3[0], 4), "C4_ROC": round(q4[0], 4),
         "gap_ROC": round(q1[0] - q4[0], 4),
@@ -1471,7 +1570,8 @@ for _q in ALARM_Q_SWEEP:
 # A sensitivity sweep that cannot reproduce the value it is perturbing is measuring
 # something else. This caught exactly that: the sweep used the modelling window while
 # engineer() used a window including the 2019 partial season.
-_base_row = [r for r in gap_rows if abs(r["alarm_quantile"] - ALARM_QUANTILE) < 1e-9]
+_base_row = [r for r in gap_rows if abs(r["alarm_quantile"] - ALARM_QUANTILE) < 1e-9
+             and r["alarm_floor"] == ALARM_MIN_CASES]
 if _base_row:
     _d = abs(_base_row[0]["gap_ROC"] - (c1[0] - c4[0]))
     assert _d < 0.01, (
@@ -1481,9 +1581,59 @@ if _base_row:
     log.info("[gate] sweep reproduces the reported gap at q=%.2f (delta %.4f)",
              ALARM_QUANTILE, _d)
 
+# The floor is its own free parameter. Sweep it at the reported quantile so the
+# gap is not resting on two unexamined constants instead of one.
+def _plf(pairs):
+    ps, ys = zip(*pairs)
+    pp, yy = np.concatenate(ps), np.concatenate(ys)
+    return float(roc_auc_score(yy, pp)), float(average_precision_score(yy, pp))
+
+for _fl in [1, 3, 5, 10]:
+    _Mf = add_alarm_labels(MD, quantile=ALARM_QUANTILE, floor=_fl)
+    _labf = _Mf[f"target_alarm_{H_ALARM}w"]
+    Af = _Mf.loc[_labf.notna()].copy()
+    Af["_y"] = _labf.loc[_labf.notna()].astype(int).values
+    if Af["_y"].nunique() < 2:
+        continue
+
+    def _ff(tr, te):
+        pr = np.mean([lgb.LGBMClassifier(**{**LGB_CLF, "random_state": sd})
+                      .fit(tr[FD_FULL], tr["_y"]).predict_proba(te[FD_FULL])[:, 1]
+                      for sd in SEEDS], axis=0)
+        return pr, te["_y"].values
+
+    _bl = sorted(Af["block"].unique())
+    _t1, _e1 = train_test_split(Af, test_size=0.20, random_state=SEED, stratify=Af["_y"])
+    f1 = _plf([_ff(_t1, _e1)])
+    f4 = _plf([_ff(Af[(Af.year < ty) & (Af.block != b)], Af[(Af.year == ty) & (Af.block == b)])
+              for ty in TEST_YEARS for b in _bl
+              if Af[(Af.year == ty) & (Af.block == b)]["_y"].nunique() > 1])
+    gap_rows.append({
+        "alarm_quantile": ALARM_QUANTILE, "alarm_floor": _fl,
+        "base_rate": round(float(Af["_y"].mean()), 4),
+        "districts_at_floor": _Mf.attrs.get("n_floored", 0), "n_rows": len(Af),
+        "C1_ROC": round(f1[0], 4), "C2_ROC": np.nan, "C3_ROC": np.nan,
+        "C4_ROC": round(f4[0], 4), "gap_ROC": round(f1[0] - f4[0], 4),
+        "C1_PR": round(f1[1], 4), "C4_PR": round(f4[1], 4),
+        "gap_PR": round(f1[1] - f4[1], 4), "ordering_holds": np.nan})
+
+# The floor sweep re-runs the reported configuration at floor=5, so it must land on
+# the quantile sweep's q=0.80 row exactly. A free replication check on the whole path.
+_dup = [r for r in gap_rows
+        if abs(r["alarm_quantile"] - ALARM_QUANTILE) < 1e-9 and r["alarm_floor"] == ALARM_MIN_CASES]
+if len(_dup) == 2:
+    assert abs(_dup[0]["gap_ROC"] - _dup[1]["gap_ROC"]) < 1e-9, (
+        f"the same configuration scored differently in the two sweeps "
+        f"({_dup[0]['gap_ROC']:.4f} vs {_dup[1]['gap_ROC']:.4f}) - the alarm path is "
+        "not deterministic and no sensitivity row can be trusted")
+    log.info("[gate] quantile and floor sweeps agree exactly at the reported setting")
+
 GAPS = save_table("table6b_alarm_threshold_sensitivity", pd.DataFrame(gap_rows),
-                  "Optimism gap re-measured at four outbreak thresholds; the reported "
-                  "matrix uses 0.80, and this shows whether the gap depends on that choice")
+                  "Optimism gap re-measured across outbreak quantiles (floor held at "
+                  f"{ALARM_MIN_CASES}) and across floors (quantile held at "
+                  f"{ALARM_QUANTILE}). districts_at_floor says how many of the 64 use the "
+                  "floor rather than their own quantile - at low quantiles that is most of "
+                  "them, so those rows are not pure quantile thresholds")
 print(GAPS.to_string(index=False))
 if len(GAPS):
     log.info("optimism gap across thresholds %s: ROC %.4f-%.4f, PR %.4f-%.4f; "
@@ -1738,8 +1888,9 @@ for h in [1, 2]:
         sens_rows.append({
             "sensitivity": "A · missing-report zeros", "horizon_weeks": h, "variant": tag,
             "n_rows": len(sub), "rows_dropped_pct": round(100 * (1 - len(sub) / len(P)), 2),
-            "anchored_skill_pct": round(100 * (1 - mean_absolute_error(sub.y, sub.anchored) / base), 2),
-            "level_Tweedie_skill_pct": round(100 * (1 - mean_absolute_error(sub.y, sub.level_Tweedie) / base), 2)})
+            "metric": "skill vs persistence (%)",
+            "anchored": round(100 * (1 - mean_absolute_error(sub.y, sub.anchored) / base), 2),
+            "level_Tweedie": round(100 * (1 - mean_absolute_error(sub.y, sub.level_Tweedie) / base), 2)})
     I = INTERVALS[(h, "split")].copy()
     tw = I["week_start"] + pd.to_timedelta(7 * h, unit="D")
     dr = _is_gap(I.unit.values, I.week_start.values) | _is_gap(I.unit.values, tw.values)
@@ -1747,8 +1898,9 @@ for h in [1, 2]:
         sens_rows.append({
             "sensitivity": "A · missing-report zeros (coverage)", "horizon_weeks": h, "variant": tag,
             "n_rows": len(sub), "rows_dropped_pct": round(100 * (1 - len(sub) / len(I)), 2),
-            "anchored_skill_pct": round(float(((sub.y >= sub.lo) & (sub.y <= sub.hi)).mean()), 4),
-            "level_Tweedie_skill_pct": np.nan})
+            "metric": "interval coverage (fraction)",
+            "anchored": round(float(((sub.y >= sub.lo) & (sub.y <= sub.hi)).mean()), 4),
+            "level_Tweedie": np.nan})
 
 # --- B. Rainfall is CHIRPS in the district panel, NASA POWER in the divisional one
 # table1c flags this (r = 0.86). If the resolution result survives dropping rain
@@ -1763,14 +1915,20 @@ for h in HORIZONS:
         if d_:
             sens_rows.append({"sensitivity": "B · rain source mismatch", "horizon_weeks": h,
                               "variant": tag, "n_rows": np.nan, "rows_dropped_pct": np.nan,
-                              "anchored_skill_pct": d_["difference_in_differences_pp"],
-                              "level_Tweedie_skill_pct": np.nan,
+                              "metric": "district-vs-divisional DiD (pp)",
+                              "anchored": d_["difference_in_differences_pp"],
+                              "level_Tweedie": np.nan,
                               "boot_lo": d_["boot_lo"], "boot_hi": d_["boot_hi"],
                               "boot_p": d_["boot_p"], "verdict": d_["verdict"]})
 
+# Three different quantities live in the `anchored` column - a skill percentage, a
+# coverage fraction and a difference-in-differences in percentage points. They are not
+# comparable to each other, so `metric` states the units of every row and nothing is
+# readable as a skill score by accident.
 SENS = save_table("table11_data_quality_sensitivity", pd.DataFrame(sens_rows),
                   "Do the two audit defects change the conclusions? "
-                  "A: missing-report zeros. B: CHIRPS-vs-POWER rainfall mismatch")
+                  "A: missing-report zeros. B: CHIRPS-vs-POWER rainfall mismatch. "
+                  "Read `anchored`/`level_Tweedie` in the units given by `metric`")
 print(SENS.to_string(index=False))
 
 
@@ -2101,6 +2259,16 @@ log.info("[gate] calibration OK: %s", {h: round(c, 3) for h, (_, c) in cov2.item
 
 # Every constant in this notebook, with how it was fixed. Anything marked
 # "assumption" is a judgement call the paper must state rather than bury.
+def _floored_at(q):
+    """How many districts use the floor rather than their own quantile, from table6b."""
+    m = GAPS[(GAPS.alarm_quantile.sub(q).abs() < 1e-9)
+             & (GAPS.alarm_floor == ALARM_MIN_CASES)]
+    return int(m["districts_at_floor"].iloc[0]) if len(m) else -1
+
+
+_FLOOR_AT_Q = _floored_at(ALARM_QUANTILE)
+_FLOOR_AT_LOW_Q = _floored_at(min(ALARM_Q_SWEEP))
+
 ASSUMPTIONS = pd.DataFrame([
     ("horizons", str(HORIZONS), "operational choice",
      "1-4 weeks is the window in which a health directorate can act"),
@@ -2141,12 +2309,32 @@ ASSUMPTIONS = pd.DataFrame([
      f"per-unit 80th percentile of training-year cases; base rate {A[YA].mean():.3f}. "
      "Cell 9b re-measures the optimism gap at 0.70/0.75/0.80/0.85 - see "
      "table6b_alarm_threshold_sensitivity.csv"),
-    ("alarm minimum cases", f"{ALARM_MIN_CASES}", "assumption",
-     "floor so that near-zero districts cannot alarm on a single case"),
-    ("case lags", "[1,2,3,4,8] weeks", "assumption",
-     "covers the intrinsic + extrinsic incubation cycle; not swept"),
-    ("climate lags", "[2,3,4] weeks", "assumption",
-     "vector-development lag from the entomological literature; not swept"),
+    ("alarm threshold basis", f"[{ALARM_BASE_MIN}, {ALARM_TRAIN_MAX}]", "empirical",
+     "the per-district quantile is taken over the modelling window only. Including the "
+     "2019 partial season (~30% of that year) shifted every per-district threshold and "
+     f"with it the reported optimism gap: this run gives {c1[0] - c4[0]:.4f} ROC against "
+     "0.0776 in the last run made on the old basis (committed results/table6, base rate "
+     f"0.179 there against {A[YA].mean():.3f} here). A sensitivity sweep that cannot "
+     "reproduce the number it perturbs is measuring something else, and the gate in "
+     "Cell 9b now checks that it does"),
+    ("alarm minimum cases", f"{ALARM_MIN_CASES}", "assumption, SENSITIVITY TESTED",
+     # Read from the sweep rather than typed in. A hand-computed version of this said
+     # 8 and 25; the modelled frame drops the early-2022 weeks that lack an 8-week lag,
+     # and the true counts are lower. Prose numbers drift, interpolated ones cannot.
+     "floor so near-zero districts cannot alarm on a single case. It binds for "
+     f"{_FLOOR_AT_Q:d} of {MD.unit.nunique()} districts at q={ALARM_QUANTILE} and "
+     f"{_FLOOR_AT_LOW_Q:d} at q={min(ALARM_Q_SWEEP)}, so it is not a formality; "
+     "table6b sweeps it over 1/3/5/10 and the gap is largest with no floor at all"),
+    ("case lags", "[1,2,3,4,8] weeks", "design, a priori",
+     "spans the intrinsic (4-7d) plus extrinsic (8-12d) incubation cycle and two "
+     "transmission generations. Fixed from the entomology before any result was seen "
+     "and never swept, so it cannot be a source of optimism - but it is also not "
+     "optimised, and a tuned lag set would likely score higher"),
+    ("climate lags", "[2,3,4] weeks", "design, a priori",
+     "egg-to-adult development plus the extrinsic incubation period, the standard "
+     "2-4 week window in the vector literature. Fixed a priori, same reasoning as the "
+     "case lags. table8b leaves each climate variable out in turn; the lag STRUCTURE "
+     "itself is not swept and that remains a stated limitation"),
     ("modelling window", "year >= 2022", "empirical",
      "2019 covers only 30% of its season (30,257 of 101,354 official) and 2020-21 are absent"),
     ("reconciliation tolerance", str(RECON_TOL_PCT), "POST-HOC",
@@ -2167,7 +2355,10 @@ print(ASSUMPTIONS.to_string(index=False))
 
 manifest = {
     "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-    "seed": SEED, "test_years": TEST_YEARS, "horizons": HORIZONS,
+    "seed": SEED, "seed_ensemble": SEEDS, "paired_comparison_seeds": N_PAIR_SEEDS,
+    "test_years": TEST_YEARS, "horizons": HORIZONS,
+    "alarm": {"quantile": ALARM_QUANTILE, "min_cases": ALARM_MIN_CASES,
+              "threshold_window": [ALARM_BASE_MIN, ALARM_TRAIN_MAX]},
     "versions": {"python": sys.version.split()[0], "pandas": pd.__version__,
                  "numpy": np.__version__, "lightgbm": lgb.__version__},
     "nominal_coverage": NOMINAL, "calibration_weeks": CAL_WEEKS_BY_H,
@@ -2178,6 +2369,7 @@ manifest = {
     "district_features_full": len(FD_FULL), "district_features_shared": len(FD_SHR),
     "divisional_rows": int(len(MV)) if MV is not None else 0,
     "forbidden_columns_blocked": sorted(FORBIDDEN),
+    "inputs": _INPUTS,
     "tables": _TABLES,
     "figures": sorted(os.path.basename(p) for p in glob.glob(os.path.join(FIGURES, "*.png"))),
 }

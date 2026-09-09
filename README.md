@@ -37,6 +37,16 @@ The clinical arm has been removed. What follows is what the data supports.
 
 ## Results
 
+> **These numbers are one commit behind the notebook.** They are the last canonical
+> Kaggle run and are internally consistent, but the notebook has since been corrected in
+> three ways that move them: the h=4 conformal calibration window was being chosen by a
+> tie-break between two failed evaluations (both scored |coverage - 0.9| = 0.9 because NaN
+> targets made the conformal quantile NaN); the burden tertiles in the conditional-coverage
+> table were derived over a different year window than the ones the Mondrian method is
+> calibrated on, so two districts sat in the wrong group; and `table5d` now reports partial
+> correlations. Re-run and regenerate this section before quoting any of it in the
+> manuscript. Do not mix numbers from this section with numbers from a new run.
+
 **Canonical run:** Kaggle, 5 Sep 2026, `ml_notebook3` at commit `7d76129`
 (Python 3.12.13, pandas 2.3.3, numpy 2.0.2, LightGBM 4.6.0). Every number below and every file
 in `results/` comes from that single execution. Cross-checked against an independent run on a
@@ -185,19 +195,34 @@ unused/                             quarantined — read unused/README.md before
 
 ## Reproducing
 
+`notebooks/ml_notebook3.py` is the source of record. `notebooks/ml_notebook3.ipynb` is
+generated from it for Kaggle and must never be edited directly.
+
 ```bash
-pip install numpy pandas scipy scikit-learn lightgbm matplotlib seaborn
-python notebooks/ml_notebook3.py          # ~8 min on 4 CPU cores; no GPU needed
+pip install numpy pandas scipy scikit-learn lightgbm statsmodels matplotlib
+
+python notebooks/ml_notebook3.py          # ~25 min on 4 CPU cores; no GPU needed
+python scripts/build_notebook.py          # regenerate the .ipynb after any source edit
+python scripts/build_notebook.py --check  # non-zero if the .ipynb has drifted
 ```
+
+`ICEEICT_PAIR_SEEDS` (default 20) and `ICEEICT_SEEDS` (default `42,7,1`) shorten a smoke
+test. Both change the numbers; canonical runs use the defaults. A local run writes to
+`artifacts/`, never over the committed `results/`.
 
 On Kaggle, attach `data/raw/district_panel/Dengue.csv`,
 `data/raw/divisional/divisional_daily_2022_2025.csv` and
 `data/raw/divisional/nasa_power_divisions_daily.csv` as one dataset, set **Accelerator: None**,
 and run. Tree models on 16k rows are faster on CPU than on a T4.
 
-The run stops itself if anything is wrong: five gate assertions cover leaked features, DGHS
-reconciliation, lags bridging the 2020–21 data gap, validation-matrix ordering, and whether the
-conformal correction actually did anything.
+The run stops itself if anything is wrong: seven gate assertions cover leaked features, DGHS
+reconciliation, lags bridging the 2020–21 data gap, validation-matrix ordering, whether the
+conformal correction actually did anything, whether the threshold sweep reproduces the gap it
+perturbs, and whether the quantile and floor sweeps agree where they overlap.
+
+`results/run_manifest.json` records the library versions, both seed sets, the alarm constants
+and a SHA-256 of every input file. A table whose manifest does not match the committed one was
+produced by different code or different data.
 
 ## Ground rules
 
